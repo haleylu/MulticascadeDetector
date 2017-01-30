@@ -77,15 +77,22 @@ public:
 
 
 	MulticascadeDetector(){
+
 		cascade_name = "toolDetector.xml";
 		video_name = "testing_1.1.mov"; 
 		loop = 0; 
-		flag = 0; 
+		flag = 0;
+
+		initTracker();
+    	initDetector();
+	}
+
+
+	void initTracker(){
 		Rect initRect(0,0,0,0); 
 		for(int i = 0 ; i < 10; i++){
 			Bboxes.push_back(initRect); 
 		}
-		
 		std::vector<int> BoxIds(500); 
 		vector<vector <int> > Points(500, vector<int>(4));
 		std::vector<int> PointIds(500,8);
@@ -94,14 +101,6 @@ public:
 		vector<vector <int> > bbox1(500, std::vector<int>(4)); 
 		area = 0; 
 		BoxIdx = 0; 
-
-		vector <float> err(100);
-	    vector <uchar> Status(100);
-	    // Size WinSize = Size(31,31);
-	    // int maxLevel = 3;
-	    // TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 30, 0.03);
-	    // int flags = 0;
-	    // double minEigThreshold = 1e-4;
 
 	    for(int u = 0; u < 2; u++){
 	    	initer.push_back(0); 
@@ -119,10 +118,22 @@ public:
     	for( int u = 0; u < 500; u++){
     		nextKeypoints.push_back(keyPointIniter);
     	}
-    	
 	}
+
+	void initDetector(){
+		vector <float> err(100);
+	    vector <uchar> Status(100);
+	    // Size WinSize = Size(31,31);
+	    // int maxLevel = 3;
+	    // TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 30, 0.03);
+	    // int flags = 0;
+	    // double minEigThreshold = 1e-4;
+	}
+
+
 	void detectProcess(){
- 
+ 		
+ 		//settings for detect
 		int i = 0; 
 		Mat frame;
 		Mat oldframe;
@@ -136,34 +147,38 @@ public:
 		     printf("cap is not opened");
 		}
 		cap.set(CV_CAP_PROP_POS_FRAMES, 10);
+
+
 		cap >> frame; 
 		cap >> cap_frame;
 
 			while( 1 ){
-			  //-- 3. Apply the classifier to the frame
+			 
 			
 			if( !frame.empty() ){ 
 			    loop++; 
 			    detectAndDisplay( frame ); 
 			    sortedBboxesId = sortRectByXAndGiveBackIndexes(Bboxes); 
-				for(int j = 0; j < (int)sortedBboxesId.size(); j++){
-			    	cout <<"ORDER of the Bboxes " <<sortedBboxesId[j] << endl;
-			    }
 			    Bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
 			    
 			}else{ 
-			    
 			    printf(" --(!) No captured frame -- Break! \n"); break; 
 			}
-				oldframe = frame; 
-			    cap.read(frame); 
-			    cap.read(cap_frame);
+			oldframe = frame; 
+		    cap.read(frame); 
+		    cap.read(cap_frame);
 
 			SingleTracker(oldframe, frame);
 			// member "nextPoints2f" is tracked points
 			for( int j = 0; j < (int)Bboxes.size(); j++){
 				cout << "the " << j << "th " << "Bboxes, " << ///
 				"x= " << Bboxes[j].x << " y = " << Bboxes[j].y << endl;  
+			}
+			for( int j = 0; j < 10; j++){
+				cout << "currentPoints, " << j << " x = " << currentPoints2f[j].x << ///
+				" y = " << currentPoints2f[j].y << endl;
+				cout << "nextPoints, " << j << " x = " << nextPoints2f[j].x << ///
+				" y = " << nextPoints2f[j].y << endl;
 			}
 
 			printf("%d \n", i); 
@@ -189,39 +204,31 @@ public:
 		Mat Key_frame;
 		drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 		imshow("Features", Key_frame); 
-		cout << "till opt start \n"; 
 
 		// convert the Keypoints to Points
-			KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
-
-		// cout<<"currentPoints : " << currentPoints2f[0].y <<endl;
-		cout<<"1 : " << currentPoints2f[0].x << endl; 
-		// 	cout <<"loop start";  
+		KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
+ 
 		for(int ii = 0; ii < (int)currentPoints2f.size(); ii++){
-			cout<<"1 : " << ii << endl;
+			
 			currentPoints[ii][0] = (int)Keypoints[ii].pt.x;
-			cout<<"2\n";
+			
 			currentPoints[ii][1] = (int)Keypoints[ii].pt.y;
-			cout<<"3\n";
+			
 		}
-
-		
-		cout << "till opt start 2\n";
 		Mat frame_gray;
 		cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 	    equalizeHist( frame_gray, frame_gray );
 	    Mat nextKey_frame;  
-	    cout << "till opt start 3\n";
+	    
 		/////drawKeypoints(frame_gray, nextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 	    //calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints, nextPoints, Status, err, WinSize, maxLevel, termcrit, flags, minEigThreshold); 
 	    calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);//, WinSize, maxLevel, termcrit, flags, minEigThreshold); 
-	    cout << "till opt end \n"; 
-	    cout << "tracking points " << nextPoints2f.size() << endl;
+	    
 	    for(int j = 0; j < (int)nextPoints2f.size(); j++){
 			nextKeypoints[j].pt.x = nextPoints2f[j].x;
 			nextKeypoints[j].pt.y = nextPoints2f[j].y;
 		}
-		cout << "tracking points " << nextKeypoints.size() << endl;
+		
 	    drawKeypoints(_frame, nextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 		imshow("nextFeatures", nextKey_frame);
 	}
@@ -272,7 +279,7 @@ private:
 	
 
 	/** @function detectAndDisplay */
-	void detectAndDisplay( Mat _frame )
+	void detectAndDisplay( Mat _frame ) // currently the old algorithm, using red rects to show tracked tools
 	{
 	    std::vector<Rect> tools;
 
@@ -281,7 +288,7 @@ private:
 	    cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 	    equalizeHist( frame_gray, frame_gray );
 	    int k = 0; 
-	    //-- Detect faces
+	    //-- Detect tools
 	    casClassifier.detectMultiScale( frame_gray, tools, 1.005, 2, 0|CASCADE_SCALE_IMAGE, Size(0, 0) );
 
 	    for( size_t i = 0; i < tools.size(); i++ ){
@@ -290,26 +297,22 @@ private:
 
 	  	    Mat toolROI = frame_gray( tools[i] );
 	  	    
-	  	    printf("Tool detected in this frame. i = %d\n", (int)i + 1);
+	  	    //printf("Tool detected in this frame. i = %d\n", (int)i + 1);
 	  	    
 	        if(loop%10 == 0 && computeRectJoinUnion(tools[i], _lasttools[i]) > 0.9 ){
 			k++;
 			_capturedtools = tools; 
 	  	        //rectangle(cap_frame, Point(tools[i].x, tools[i].y), Point(tools[i].x + tools[i].width, tools[i].y + tools[i].height), Scalar(0,0,255)); 
-			printf("Tool TRACKING TRACKING in this frame. k = %d, tool number is %d\n", (int)k, (int)i + 1);
+			//printf("Tool TRACKING TRACKING in this frame. k = %d, tool number is %d\n", (int)k, (int)i + 1);
 			flag = 1; 	  	    
 			} 
 		if(flag  == 1){
 			rectangle(cap_frame, Point(_capturedtools[i].x, _capturedtools[i].y), Point(_capturedtools[i].x + _capturedtools[i].width, _capturedtools[i].y + _capturedtools[i].height), Scalar(0,0,255));
 		}
-		k = 0;
+			k = 0;
 	        _lasttools = tools; 
 
-	        // test codes
-	        Bboxes = tools; 
-	        //int testerID = 0;
-	        //testerID = findMatchingBox(tools[1]); 
-	        //cout << "testerID: " << testerID << "\n"; 
+	        Bboxes = tools;
 	    	
 	    	
 	    }
@@ -317,9 +320,7 @@ private:
 	    imshow( window_name, _frame );
 	    imshow( "captured", cap_frame); 
 	 }
-	 // bool compareRect(const Rect &A, const Rect &B){
-	 // 	return A.y < B.y;
-	 // }
+
 
 	 // rearrange Bboxes to have a rising order
 	//qsort(Bboxes, Bboxes.size(), sizeof(Rect), compareRect); 
@@ -341,6 +342,7 @@ private:
 	// 	cout << "Bboxes in ascending order No. "  <<sortedBboxesId[j] << endl;
 	// }
 
+
 	vector<Rect> rearrangeBboxesUsingSortedIndexes(vector<int> Indexes){
 		vector<Rect> newBboxes; 
 		Rect initRect(0,0,0,0); 
@@ -352,6 +354,8 @@ private:
 		}
 		return newBboxes; 
 	}
+
+
 	// this function computes the ratio of two consecutive bounding boxes
 	float computeRectJoinUnion(const Rect &rc1, const Rect &rc2)
 	{
@@ -373,7 +377,7 @@ private:
 	    float AUnion = (A1 + A2 - AJoin);                 
 	    //float edge_ratio = ((float)rc1.width/((float)rc1.width + (float)rc2.width) ) * ( (float)rc1.height/((float)rc1.height + (float)rc2.height));
 	    if( AUnion > 0 ){
-		printf("In the tracking mode, ratio = %f\n", (float)(AJoin * AJoin)/(A1*A2));
+		//printf("In the tracking mode, ratio = %f\n", (float)(AJoin * AJoin)/(A1*A2));
 	        return AJoin;
 		
 		}                   
