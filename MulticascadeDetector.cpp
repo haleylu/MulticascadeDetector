@@ -12,7 +12,8 @@
 #include <iostream>
 #include <stdio.h>
 #include <algorithm>
-
+//test git
+//test git 2
 using namespace std;
 using namespace cv;
 
@@ -170,7 +171,7 @@ public:
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
-      		}
+      		} 
 	}
 
 	void SingleTracker(Mat _oldframe, Mat _frame){
