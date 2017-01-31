@@ -45,7 +45,7 @@ public:
 	int area; 
 	int BoxIdx; 
 
-	// testers
+	
 	Mat frame_gray;
     Mat Mask;
     Mat ROI;
@@ -75,13 +75,22 @@ public:
     KeyPoint keyPointIniter; 
     vector<int> sortedBboxesId; 
 
-
+    int RedetectPointsFlag; 
+    //////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////
+    ////////////     initializer                                           ///////////////
+    //////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////
 	MulticascadeDetector(){
 
 		cascade_name = "toolDetector.xml";
 		video_name = "testing_1.1.mov"; 
+		window_name = "Capture";
+		rng(12345);
 		loop = 0; 
 		flag = 0;
+		RedetectPointsFlag = 0; 
 
 		initTracker();
     	initDetector();
@@ -137,10 +146,10 @@ public:
 		int i = 0; 
 		Mat frame;
 		Mat oldframe;
-		window_name = "Capture";
-		rng(12345);
+		
+
 		if( !casClassifier.load( cascade_name ) ){ printf("--(!)Error loading\n");};
-		//casClassifier.load(cascade_name);//
+
 		cout << "READ IN FRAMES STARTS" << endl; 
 	        VideoCapture cap(video_name); 
 	        if( !cap.isOpened() ){
@@ -153,23 +162,35 @@ public:
 		cap >> cap_frame;
 
 			while( 1 ){
-			 
-			
+
+			printf("The %dth frame started. \n", i); 
+	    	i++;
+
 			if( !frame.empty() ){ 
 			    loop++; 
+			    // Detect bounding boxes in the frame, save the corrdinates in Bboxes
+			    // then display the Bboxes
 			    detectAndDisplay( frame ); 
+			    // Rearrange Bboxes by left top point.x
 			    sortedBboxesId = sortRectByXAndGiveBackIndexes(Bboxes); 
 			    Bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
 			    
 			}else{ 
 			    printf(" --(!) No captured frame -- Break! \n"); break; 
 			}
-			oldframe = frame; 
-		    cap.read(frame); 
-		    cap.read(cap_frame);
+			oldframe = frame.clone(); 
+			cap >> frame; 
+	    	cap >> cap_frame;
+			
 
-			SingleTracker(oldframe, frame);
+		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
+			SingleTracker(oldframe, frame);
+			RedetectPointsFlag = 1; // close the RedetectPonts process
+			if(i%10 == 0){
+				RedetectPointsFlag = 0; 
+			}
+			
 			for( int j = 0; j < (int)Bboxes.size(); j++){
 				cout << "the " << j << "th " << "Bboxes, " << ///
 				"x= " << Bboxes[j].x << " y = " << Bboxes[j].y << endl;  
@@ -180,9 +201,7 @@ public:
 				cout << "nextPoints, " << j << " x = " << nextPoints2f[j].x << ///
 				" y = " << nextPoints2f[j].y << endl;
 			}
-
-			printf("%d \n", i); 
-	    	i++;
+			cout << "nextPoints2f has member " << nextPoints2f.size() << endl; 
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
@@ -190,31 +209,37 @@ public:
 	}
 
 	void SingleTracker(Mat _oldframe, Mat _frame){
+
 		Mat oldframe_gray; 
 		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
 	    equalizeHist( oldframe_gray, oldframe_gray );
-	    Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
-	    Mat ROI(Mask, Bboxes[0]);// init the mask matrix
-	    ROI = Scalar(255,255,255);
-	    double MinHessian = 400;
-	    int octaves = 3;
-	    int octaveLayers = 6;
-	    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
-		sDetector.detect(oldframe_gray, Keypoints, Mask);
+
+	    if(RedetectPointsFlag == 0){
+	    	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
+		    Mat ROI(Mask, Bboxes[0]);// init the mask matrix
+		    ROI = Scalar(255,255,255);
+		    double MinHessian = 400;
+		    int octaves = 3;
+		    int octaveLayers = 6;
+		    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
+			sDetector.detect(oldframe_gray, Keypoints, Mask);
+	    }
+	    
+
 		Mat Key_frame;
 		drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-		imshow("Features", Key_frame); 
+		imshow("Feature Points", Key_frame); 
 
-		// convert the Keypoints to Points
+		// convert the Keypoints to Points2f for optical flow tracking
 		KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
  
-		for(int ii = 0; ii < (int)currentPoints2f.size(); ii++){
+		// for(int ii = 0; ii < (int)currentPoints2f.size(); ii++){
 			
-			currentPoints[ii][0] = (int)Keypoints[ii].pt.x;
+		// 	currentPoints[ii][0] = (int)Keypoints[ii].pt.x;
 			
-			currentPoints[ii][1] = (int)Keypoints[ii].pt.y;
+		// 	currentPoints[ii][1] = (int)Keypoints[ii].pt.y;
 			
-		}
+		// }
 		Mat frame_gray;
 		cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 	    equalizeHist( frame_gray, frame_gray );
