@@ -256,6 +256,12 @@ public:
 		
 	    drawKeypoints(_frame, nextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 		imshow("nextFeatures", nextKey_frame);
+		Keypoints.clear();
+		// substitute Keypoints with nextKeypoints
+		for(int j = 0; j < (int)nextKeypoints.size(); j++){
+			Keypoints.push_back(nextKeypoints[j]); 
+		}
+		
 	}
 	/////
 	// void addDetection(Mat currentFrame, vector<Rect> bboxes){ //seems tracker in CV is a function
