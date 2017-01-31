@@ -1,5 +1,6 @@
+IDIR =.
 CC = g++
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -I$(IDIR)
 SRCS = main.cpp MulticascadeDetector.cpp
 OBJS = $(SRCS : .cpp = .o)
 PROG = cascade_test
