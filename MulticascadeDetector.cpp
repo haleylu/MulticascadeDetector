@@ -40,6 +40,7 @@ public:
 	vector<vector <int> > Points;
 	vector<int> PointIds;
 	vector<int> PointNums; 
+	vector<int> PointNumsTillThisBbox; 
 	vector<int> BoxScores; 
 	vector<vector <int> > bbox1;
 	int NextId; 
@@ -192,11 +193,14 @@ public:
 			cap >> frame; 
 	    	cap >> cap_frame;
 			
-	    	allNextKeypoints.clear();
-	    	PointNums.clear(); 
-	    	PointIds.clear(); 
+	    	cout << "All togeether " << Bboxes.size() << " Bboxes" << endl; 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
+			PointNumsTillThisBbox.clear();
+	    	PointIds.clear(); 
+	    	PointNums.clear();
+	    	allNextKeypoints.clear();
+	    	
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
 			}
@@ -233,6 +237,10 @@ public:
 		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
 	    equalizeHist( oldframe_gray, oldframe_gray );
 
+    	Keypoints.clear();
+    	currentPoints2f.clear(); 
+	    nextPoints2f.clear();
+
 	    if(RedetectPointsFlag == 0){
 	    	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
 		    Mat ROI(Mask, Bboxes[BboxNum]);// init the mask matrix
@@ -242,10 +250,20 @@ public:
 		    int octaveLayers = 6;
 		    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
 			sDetector.detect(oldframe_gray, Keypoints, Mask);
+
 	    }else{
 	    	// use allNextPoints to reconstruct the points for tracker
-	    	
+	    	cout << "somewhere" << endl; 
+	    	for(int j = 0; j < PointNumsTillThisBbox[BboxNum + 1] - PointNumsTillThisBbox[BboxNum]; j++){
+	    		Keypoints.push_back(allNextKeypoints[PointNumsTillThisBbox[BboxNum]  + j ]);
+
+	    	}
+	    	cout << "in time" <<endl; 
+	    	// yue jie zai ci
+	    	cout << "Keypoints Number is " << Keypoints.size() << endl;
+		
 	    }
+	     
 	    
 
 		Mat Key_frame;
@@ -279,16 +297,22 @@ public:
 			allNextKeypoints.push_back(nextKeypoints[j]);
 			PointIds.push_back(BboxNum); 
 		}
-		PointNums.push_back((int)nextKeypoints.size()); 
+		PointNums.push_back((int)nextPoints2f.size());
+		if( (int)PointNums.size() == 1){
+			PointNumsTillThisBbox.push_back( 0 );
+		} else{
+			PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[BboxNum-1] + PointNums[BboxNum-1] );
+		}
+		 cout << "PointNumsTillThisBbox " << PointNumsTillThisBbox[BboxNum] << endl; 
 		cout << "PointId in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << " PointNums " << PointNums[BboxNum] << endl; 
 
 	    cout << BboxNum << " Bbox has points " << nextKeypoints.size() << endl; 
 		
 		// substitute Keypoints with nextKeypoints
-		Keypoints.clear();
-		for(int j = 0; j < (int)nextKeypoints.size(); j++){
-			Keypoints.push_back(nextKeypoints[j]); 
-		}
+		// Keypoints.clear();
+		// for(int j = 0; j < (int)nextKeypoints.size(); j++){
+		// 	Keypoints.push_back(nextKeypoints[j]); 
+		// }
 		
 	}
 	/////
