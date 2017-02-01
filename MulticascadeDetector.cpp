@@ -39,6 +39,7 @@ public:
 	vector<int> BoxIds; 
 	vector<vector <int> > Points;
 	vector<int> PointIds;
+	vector<int> PointNums; 
 	vector<int> BoxScores; 
 	vector<vector <int> > bbox1;
 	int NextId; 
@@ -77,6 +78,7 @@ public:
     vector<int> sortedBboxesId; 
 
     int RedetectPointsFlag; 
+    cv::KeyPoint nextOneKeyPoint; 
     //////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////
@@ -125,11 +127,15 @@ public:
 	    // for(int jj = 0; jj < 500; jj++){
 	    // 	currentPoints.push_back(initer);
 	    // }
-    	for( int u = 0; u < 500; u++){
-    		nextKeypoints.push_back(keyPointIniter);
-    	}
+    	// for( int u = 0; u < 500; u++){
+    	// 	nextKeypoints.push_back(keyPointIniter);
+    	// }
+    	
+    	nextOneKeyPoint.pt.x = 0;
+    	nextOneKeyPoint.pt.y = 0; 
+
     	for( int u = 0; u < 2000; u++){
-    		allNextKeypoints.push_back(keyPointIniter);
+    		//allNextKeypoints.push_back(keyPointIniter);
     	}
 	}
 
@@ -186,12 +192,15 @@ public:
 			cap >> frame; 
 	    	cap >> cap_frame;
 			
-
+	    	allNextKeypoints.clear();
+	    	PointNums.clear(); 
+	    	PointIds.clear(); 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
 			}
+			// draw all the point at a time
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
 
@@ -204,13 +213,14 @@ public:
 				cout << "the " << j << "th " << "Bboxes, " << ///
 				"x= " << Bboxes[j].x << " y = " << Bboxes[j].y << endl;  
 			}
-			for( int j = 0; j < 10; j++){
-				cout << "currentPoints, " << j << " x = " << currentPoints2f[j].x << ///
-				" y = " << currentPoints2f[j].y << endl;
-				cout << "nextPoints, " << j << " x = " << nextPoints2f[j].x << ///
-				" y = " << nextPoints2f[j].y << endl;
-			}
-			cout << "nextPoints2f has member " << nextPoints2f.size() << endl; 
+			// to make sure it's tracking, not dupllicating
+			// for( int j = 0; j < 10; j++){
+			// 	cout << "currentPoints, " << j << " x = " << currentPoints2f[j].x << ///
+			// 	" y = " << currentPoints2f[j].y << endl;
+			// 	cout << "nextPoints, " << j << " x = " << nextPoints2f[j].x << ///
+			// 	" y = " << nextPoints2f[j].y << endl;
+			// }
+			cout << "allNextKeypoints has member " << allNextKeypoints.size() << endl; 
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
@@ -232,6 +242,9 @@ public:
 		    int octaveLayers = 6;
 		    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
 			sDetector.detect(oldframe_gray, Keypoints, Mask);
+	    }else{
+	    	// use allNextPoints to reconstruct the points for tracker
+	    	
 	    }
 	    
 
@@ -257,14 +270,19 @@ public:
 		/////drawKeypoints(frame_gray, nextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 	    //calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints, nextPoints, Status, err, WinSize, maxLevel, termcrit, flags, minEigThreshold); 
 	    calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);//, WinSize, maxLevel, termcrit, flags, minEigThreshold); 
-	    
+	    nextKeypoints.clear();
 	    for(int j = 0; j < (int)nextPoints2f.size(); j++){
-			nextKeypoints[j].pt.x = nextPoints2f[j].x;
-			nextKeypoints[j].pt.y = nextPoints2f[j].y;
+	    	
+	    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
+	    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
+	    	nextKeypoints.push_back(nextOneKeyPoint); 
 			allNextKeypoints.push_back(nextKeypoints[j]);
+			PointIds.push_back(BboxNum); 
 		}
-		
-	    
+		PointNums.push_back((int)nextKeypoints.size()); 
+		cout << "PointId in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << " PointNums " << PointNums[BboxNum] << endl; 
+
+	    cout << BboxNum << " Bbox has points " << nextKeypoints.size() << endl; 
 		
 		// substitute Keypoints with nextKeypoints
 		Keypoints.clear();
