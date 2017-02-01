@@ -56,6 +56,7 @@ public:
 	Mat Key_frame; 
 	vector<cv::KeyPoint> Keypoints;
 	vector<cv::KeyPoint> nextKeypoints;
+	vector<cv::KeyPoint> allNextKeypoints; 
 
 	vector <float> err;
     vector <uchar> Status;
@@ -127,6 +128,9 @@ public:
     	for( int u = 0; u < 500; u++){
     		nextKeypoints.push_back(keyPointIniter);
     	}
+    	for( int u = 0; u < 2000; u++){
+    		allNextKeypoints.push_back(keyPointIniter);
+    	}
 	}
 
 	void initDetector(){
@@ -162,7 +166,7 @@ public:
 		cap >> cap_frame;
 
 			while( 1 ){
-
+			cout << endl << endl; 
 			printf("The %dth frame started. \n", i); 
 	    	i++;
 
@@ -185,7 +189,12 @@ public:
 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
-			SingleTracker(oldframe, frame);
+			for(int j = 0; j < (int)Bboxes.size(); j++){
+				SingleTracker(oldframe, frame, j);
+			}
+			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			imshow("nextFeatures", nextKey_frame);
+
 			RedetectPointsFlag = 1; // close the RedetectPonts process
 			if(i%10 == 0){
 				RedetectPointsFlag = 0; 
@@ -208,7 +217,7 @@ public:
       		} 
 	}
 
-	void SingleTracker(Mat _oldframe, Mat _frame){
+	void SingleTracker(Mat _oldframe, Mat _frame, int BboxNum){
 
 		Mat oldframe_gray; 
 		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
@@ -216,7 +225,7 @@ public:
 
 	    if(RedetectPointsFlag == 0){
 	    	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
-		    Mat ROI(Mask, Bboxes[0]);// init the mask matrix
+		    Mat ROI(Mask, Bboxes[BboxNum]);// init the mask matrix
 		    ROI = Scalar(255,255,255);
 		    double MinHessian = 400;
 		    int octaves = 3;
@@ -252,12 +261,13 @@ public:
 	    for(int j = 0; j < (int)nextPoints2f.size(); j++){
 			nextKeypoints[j].pt.x = nextPoints2f[j].x;
 			nextKeypoints[j].pt.y = nextPoints2f[j].y;
+			allNextKeypoints.push_back(nextKeypoints[j]);
 		}
 		
-	    drawKeypoints(_frame, nextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-		imshow("nextFeatures", nextKey_frame);
-		Keypoints.clear();
+	    
+		
 		// substitute Keypoints with nextKeypoints
+		Keypoints.clear();
 		for(int j = 0; j < (int)nextKeypoints.size(); j++){
 			Keypoints.push_back(nextKeypoints[j]); 
 		}
