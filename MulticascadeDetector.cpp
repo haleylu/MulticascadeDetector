@@ -239,25 +239,25 @@ public:
 
 	void SingleTracker(Mat _oldframe, Mat _frame, int BboxNum){
 
-		Mat oldframe_gray; 
-		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
-	    equalizeHist( oldframe_gray, oldframe_gray );
+		// Mat oldframe_gray; 
+		// cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
+	 //    equalizeHist( oldframe_gray, oldframe_gray );
 
     	Keypoints.clear();
     	currentPoints2f.clear(); 
 	    nextPoints2f.clear();
 
-	    if(RedetectPointsFlag == 0){
-	    	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
-		    Mat ROI(Mask, Bboxes[BboxNum]);// init the mask matrix
-		    ROI = Scalar(255,255,255);
-		    double MinHessian = 400;
-		    int octaves = 3;
-		    int octaveLayers = 6;
-		    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
-			sDetector.detect(oldframe_gray, Keypoints, Mask);
+	    // if(RedetectPointsFlag == 0){
+	  //   	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
+		 //    Mat ROI(Mask, Bboxes[BboxNum]);// init the mask matrix
+		 //    ROI = Scalar(255,255,255);
+		 //    double MinHessian = 400;
+		 //    int octaves = 3;
+		 //    int octaveLayers = 6;
+		 //    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
+			// sDetector.detect(oldframe_gray, Keypoints, Mask);
 
-	    }else{
+	    // }else{
 	    	// use allNextPoints to reconstruct the points for tracker
 	    	cout << "somewhere" << endl; 
 	    	for(int j = 0; j < PointNumsTillThisBbox[BboxNum + 1] - PointNumsTillThisBbox[BboxNum]; j++){
@@ -268,7 +268,7 @@ public:
 	    	// yue jie zai ci
 	    	cout << "Keypoints Number is " << Keypoints.size() << endl;
 		
-	    }
+	    // }
 	     
 	    
 
@@ -332,16 +332,19 @@ public:
 				Bboxes.push_back(_bboxes[j]);
 
 				// detector
-				vector<cv::KeyPoint> Keypoints;
-				double MinHessian = 400;
-        	    int octaves = 3;
-        	    int octaveLayers = 6;
-        	    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
-        		Mat Mask = Mat::zeros(frame.size(), CV_8U); 
-			    Mat ROI(Mask, bboxes[j]);// init the mask matrix
+				Mat oldframe_gray; 
+				cvtColor(_Frame, oldframe_gray, CV_BGR2GRAY );
+			    equalizeHist( oldframe_gray, oldframe_gray );
+				Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
+			    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
 			    ROI = Scalar(255,255,255);
-			    sDetector.detect(currentFrame, Keypoints, Mask);
-			    cout << "size : " << Keypoints.size() << endl;
+			    double MinHessian = 400;
+			    int octaves = 3;
+			    int octaveLayers = 6;
+			    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
+				vector<cv::KeyPoint> Keypoints;
+				sDetector.detect(oldframe_gray, _Keypoints, Mask);
+				cout << "size : " << Keypoints.size() << endl;
 
 			}
 			else{
