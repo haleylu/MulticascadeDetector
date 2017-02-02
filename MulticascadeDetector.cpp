@@ -323,13 +323,13 @@ public:
 		
 	}
 	/////addDetection should rearrange allNextKeypoints
-	void addDetection(Mat _Frame, vector<Rect> _Bboxes){ //seems tracker in CV is a function
+	void addDetection(Mat _Frame, vector<Rect> _bboxes){ //seems tracker in CV is a function
 		//assume bboxes are already there
 
-		for(int j = 0; j < _Bboxes.size(), j++){
-			int boxIdx = findMatchingBox(_Bboxes[i]); 
-			if (boxIdx != NOTHING){
-				Bboxes.push_back(bboxes[j]);
+		for(int j = 0; j < _bboxes.size(), j++){
+			int boxIdx = findMatchingBox(_bboxes[i]); 
+			if (boxIdx = NOTHING){
+				Bboxes.push_back(_bboxes[j]);
 
 				// detector
 				vector<cv::KeyPoint> Keypoints;
