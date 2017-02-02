@@ -16,6 +16,7 @@
 //test git 2
 using namespace std;
 using namespace cv;
+#define NOTHING 42
 
 class MulticascadeDetector{
 
@@ -36,6 +37,7 @@ public:
 
 	// MATLAB re-creating
 	vector< Rect > Bboxes; 
+	vector<Rect> bboxes; 
 	vector<int> BoxIds; 
 	vector<vector <int> > Points;
 	vector<int> PointIds;
@@ -103,8 +105,9 @@ public:
 
 	void initTracker(){
 		Rect initRect(0,0,0,0); 
-		for(int i = 0 ; i < 10; i++){
+		for(int i = 0 ; i < 5; i++){
 			Bboxes.push_back(initRect); 
+			bboxes.push_back(initRect);
 		}
 		std::vector<int> BoxIds(500); 
 		vector<vector <int> > Points(500, vector<int>(4));
@@ -183,8 +186,8 @@ public:
 			    // then display the Bboxes
 			    detectAndDisplay( frame ); 
 			    // Rearrange Bboxes by left top point.x
-			    sortedBboxesId = sortRectByXAndGiveBackIndexes(Bboxes); 
-			    Bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
+			    sortedBboxesId = sortRectByXAndGiveBackIndexes(bboxes); 
+			    bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
 			    
 			}else{ 
 			    printf(" --(!) No captured frame -- Break! \n"); break; 
@@ -193,12 +196,15 @@ public:
 			cap >> frame; 
 	    	cap >> cap_frame;
 			
-	    	cout << "All togeether " << Bboxes.size() << " Bboxes" << endl; 
+	    	cout << "All togeether " << bboxes.size() << " Bboxes" << endl; 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
+
+			addDetection(frame, bboxes); // rearrange all the 5 variables
 			PointNumsTillThisBbox.clear();
 	    	PointIds.clear(); 
 	    	PointNums.clear();
+	    	BoxIds.clear();
 	    	allNextKeypoints.clear();
 	    	
 			for(int j = 0; j < (int)Bboxes.size(); j++){
@@ -208,7 +214,7 @@ public:
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
 
-			RedetectPointsFlag = 1; // close the RedetectPonts process
+			RedetectPointsFlag = 1; // close the Redetect status
 			if(i%10 == 0){
 				RedetectPointsFlag = 0; 
 			}
@@ -297,6 +303,7 @@ public:
 			allNextKeypoints.push_back(nextKeypoints[j]);
 			PointIds.push_back(BboxNum); 
 		}
+		BoxIds.push_back(BboxNum);
 		PointNums.push_back((int)nextPoints2f.size());
 		if( (int)PointNums.size() == 1){
 			PointNumsTillThisBbox.push_back( 0 );
@@ -305,7 +312,7 @@ public:
 		}
 		 cout << "PointNumsTillThisBbox " << PointNumsTillThisBbox[BboxNum] << endl; 
 		cout << "PointId in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << " PointNums " << PointNums[BboxNum] << endl; 
-
+		cout << "BoxId in this Bbox " << BboxNum << endl; 
 	    cout << BboxNum << " Bbox has points " << nextKeypoints.size() << endl; 
 		
 		// substitute Keypoints with nextKeypoints
@@ -315,33 +322,34 @@ public:
 		// }
 		
 	}
-	/////
-	// void addDetection(Mat currentFrame, vector<Rect> bboxes){ //seems tracker in CV is a function
-	// 	//assume bboxes are already there
-	// 	for(int j = 0; j < bboxes.size(), j++){
-	// 		int boxIdx = findMatchingBox(bboxes[i]); 
-	// 		if (boxIdx.empty()){
-	// 			Bboxes.push_back(bboxes[j]);
+	/////addDetection should rearrange allNextKeypoints
+	void addDetection(Mat _Frame, vector<Rect> _Bboxes){ //seems tracker in CV is a function
+		//assume bboxes are already there
 
-	// 			// detector
-	// 			vector<cv::KeyPoint> Keypoints;
-	// 			double MinHessian = 400;
- //        	    int octaves = 3;
- //        	    int octaveLayers = 6;
- //        	    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
- //        		Mat Mask = Mat::zeros(frame.size(), CV_8U); 
-	// 		    Mat ROI(Mask, bboxes[j]);// init the mask matrix
-	// 		    ROI = Scalar(255,255,255);
-	// 		    sDetector.detect(currentFrame, Keypoints, Mask);
-	// 		    cout << "size : " << Keypoints.size() << endl;
+		for(int j = 0; j < _Bboxes.size(), j++){
+			int boxIdx = findMatchingBox(_Bboxes[i]); 
+			if (boxIdx != NOTHING){
+				Bboxes.push_back(bboxes[j]);
 
-	// 		}
-	// 		else{
+				// detector
+				vector<cv::KeyPoint> Keypoints;
+				double MinHessian = 400;
+        	    int octaves = 3;
+        	    int octaveLayers = 6;
+        	    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
+        		Mat Mask = Mat::zeros(frame.size(), CV_8U); 
+			    Mat ROI(Mask, bboxes[j]);// init the mask matrix
+			    ROI = Scalar(255,255,255);
+			    sDetector.detect(currentFrame, Keypoints, Mask);
+			    cout << "size : " << Keypoints.size() << endl;
 
-	// 		}
-	// 	}		
+			}
+			else{
+
+			}
+		}		
 		
-	// }
+	}
 
 
 	int findMatchingBox(Rect box){
@@ -349,12 +357,12 @@ public:
 			////
 			area = computeRectJoinUnion(Bboxes[i], box);
 			if(area > 0.2 * Bboxes[i].width * Bboxes[i].height){
-				//BoxIdx = BoxIds[i]; // Here's the problem
-				BoxIdx = 111; 
+				BoxIdx = BoxIds[i]; // Here's the problem
+				//BoxIdx = 111; 
 				return BoxIdx; 
 			}
 		}
-		return 0; 
+		return NOTHING; 
 	}
 
 private:
@@ -395,7 +403,7 @@ private:
 			k = 0;
 	        _lasttools = tools; 
 
-	        Bboxes = tools;
+	        bboxes = tools;//In vector, = is copy
 	    	
 	    	
 	    }
