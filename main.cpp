@@ -6,6 +6,16 @@
 #include <stdio.h>
 #include "MulticascadeDetector.cpp"
 
+// #include "rt_nonfinite.h"
+// #include "cfind.h"
+// #include "cfind_terminate.h"
+// #include "cfind_emxAPI.h"
+// #include "cfind_initialize.h"
+// #include <stddef.h>
+// #include <stdlib.h>
+// #include <string.h>
+// #include "rtwtypes.h"
+// #include "cfind_types.h"
 
 using namespace std;
 using namespace cv;
@@ -32,14 +42,48 @@ int main( int argc, const char** argv ){
 	 //  m(1,1) = m(1,0) + m(0,1);
 	 //  std::cout << m << std::endl;
 
-	vector< vector<float> > Points;
-	for(int u = 0; u < 2000; u++){
-	    	Points.push_back(vector<float>(2,2.f)); 
-	    }
-    cout << Points[1999][0] << endl << Points[20][1] << endl; 
-    cout << "40" << endl; 
-    Points.clear();
-    cout << Points.size() << endl;
+	vector<int> pencil;
+	for(int j = 0; j < 10; j++){
+		pencil.push_back(j); 
+	}
+	cout << "SIZE" << pencil.size() << endl;
+	for(int u = 0; u < (int)pencil.size(); u++){
+		cout << pencil[u] << " "; 
+	}
+	cout << endl; 
 
+	pencil.erase(pencil.begin()); 
+	cout << "SIZE" << pencil.size() << endl;
+	for(int u = 0; u < (int)pencil.size(); u++){
+		cout << pencil[u] << " "; 
+	}
+	cout << endl;
+
+	pencil.erase(pencil.begin()+1, pencil.begin()+3);
+	cout << "SIZE" << pencil.size() << endl;
+	for(int u = 0; u < (int)pencil.size(); u++){
+		cout << pencil[u] << " "; 
+	}
+	cout << endl;
+
+	// emxArray_real_T *indexes_ = NULL;
+ //  	emxArray_int32_T *X = NULL;
+ //  	int32_T pencil_[(int)pencil.size()];
+ //  	int indexes[(int)pencil.size()];  
+ //  	for(int u = 0; u < (int)pencil.size(); u ++){
+ //  		pencil_[u] = (int32_T)pencil[u];
+ //  	}
+ //  	X = emxCreateWrapper_int32_T(pencil_, 1, (int)pencil.size());
+	// cfind(X, 4, indexes_);
+	// // for(int u = 0; u < indexes_->size[0]; u ++){
+ // //  		 indexes[u] = indexes_->data[u];
+ // //  	}
+	// emxDestroyArray_int32_T(X); 
+
+	// cout << indexes_->data[0] << endl; 
+	// // cout << indexes[0] << endl; 
+
+
+	
 	return 0;
 }
