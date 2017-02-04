@@ -208,7 +208,7 @@ public:
 	  //   	PointIds.clear(); 
 	  //   	PointNums.clear();
 	  //   	BoxIds.clear();
-	  //   	allNextKeypoints.clear();
+	    	allNextKeypoints.clear();
 	    	cout << "reached 209" << endl; 
 	    	cout << "Bboxes.size = " << Bboxes.size() << endl;
 			for(int j = 0; j < (int)Bboxes.size(); j++){
@@ -275,7 +275,9 @@ public:
 		
 	     }
 	     
-	    
+	    if(Keypoints.size() == 0){
+	    	return;
+	    }
 
 		Mat Key_frame;
 		drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
