@@ -222,10 +222,7 @@ public:
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
 
-			RedetectPointsFlag = 1; // close the Redetect status
-			if(i%10 == 0){
-				RedetectPointsFlag = 0; 
-			}
+
 			
 			for( int j = 0; j < (int)Bboxes.size(); j++){
 				cout << "the " << j << "th " << "Bboxes, " << ///
@@ -239,6 +236,16 @@ public:
 			// 	" y = " << nextPoints2f[j].y << endl;
 			// }
 			cout << "allNextKeypoints.size() = " << allNextKeypoints.size() << endl; 
+
+			RedetectPointsFlag = 1; // close the Redetect status
+			if(i%10 == 0){
+				RedetectPointsFlag = 0; 
+				PointNumsTillThisBbox.clear();
+		    	PointIds.clear(); 
+		    	PointNums.clear();
+		    	BoxIds.clear(); 
+		    	allNextKeypoints.clear();
+			}
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
@@ -258,7 +265,7 @@ public:
     	Keypoints.clear();
     	currentPoints2f.clear(); 
 	    nextPoints2f.clear();
-
+	    nextKeypoints.clear();
 	    if(RedetectPointsFlag == 0){
 
 	    	// every 10 frames, detect feature points in given Bbox, 
@@ -271,6 +278,54 @@ public:
 		    int octaveLayers = 6;
 		    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
 			sDetector.detect(oldframe_gray, Keypoints, Mask);
+
+			
+
+			// draw Keypoints in this Bbox in "Feature Points" window
+			Mat Key_frame;
+			drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			imshow("Feature Points", Key_frame); 
+
+			// convert the Keypoints to Points2f for optical flow tracking
+			KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
+			// optical flow, track currentPoints2f, give out nextPoints2f	    
+			calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);
+		    
+		    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
+		    for(int j = 0; j < (int)nextPoints2f.size(); j++){
+		    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
+		    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
+		    	nextKeypoints.push_back(nextOneKeyPoint); 
+				allNextKeypoints.push_back(nextKeypoints[j]);
+				PointIds.push_back(BboxNum); 
+			}
+			BoxIds.push_back(BboxNum);
+			PointNums.push_back((int)nextPoints2f.size());
+			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
+			if( (int)PointNums.size() == 1){
+				cout << "1 case" << endl; 
+				PointNumsTillThisBbox.push_back( 0 );
+			}else if((int)PointNums.size() == ((int)Bboxes.size())){
+				cout << "end case" << endl; 
+				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
+				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
+			}else{
+				cout << "middle" << endl; 
+				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
+			}
+
+			cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
+			cout << "BoxId in this Bbox " << BboxNum << endl; 
+			cout << "PointNumsTillThisBbox has size " << PointNumsTillThisBbox.size() << endl; 
+			cout << "The current element of PointNumsTillThisBbox is " << PointNumsTillThisBbox[BboxNum] << endl; 
+			cout << "PointIds(all the same) in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << endl; 
+			cout << "All together #PointIds add in this Bbox(PointNums) " << PointNums[BboxNum] << endl;
+			cout << "-----------------" << endl << "SingleTracker ended" << endl << "--------------" << endl; 
+			// substitute Keypoints with nextKeypoints
+			// Keypoints.clear();
+			// for(int j = 0; j < (int)nextKeypoints.size(); j++){
+			// 	Keypoints.push_back(nextKeypoints[j]); 
+			// }
 
 	     }else{
 		    //cout << "reached 266" << endl;
@@ -288,67 +343,69 @@ public:
 		    	}
 		    	// yue jie zai ci
 		    	cout << "Keypoints Number is " << Keypoints.size() << endl;
-	
-	     }
+			
+	    
 	     
-	    // PointNumsTillThisBbox.clear();
-    	// PointIds.clear(); 
-    	// PointNums.clear();
-    	// BoxIds.clear(); 
-    	// allNextKeypoints.clear();
+		    // PointNumsTillThisBbox.clear();
+	    	// PointIds.clear(); 
+	    	// PointNums.clear();
+	    	// BoxIds.clear(); 
+	    	// allNextKeypoints.clear();
 
-	    // draw Keypoints in this Bbox in "Feature Points" window
-		Mat Key_frame;
-		cout << "302" << endl;
-		drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-		imshow("Feature Points", Key_frame); 
+		    // draw Keypoints in this Bbox in "Feature Points" window
+			Mat Key_frame;
+			cout << "302" << endl;
+			drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			imshow("Feature Points", Key_frame); 
 
-		// convert the Keypoints to Points2f for optical flow tracking
-		KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
-		// optical flow, track currentPoints2f, give out nextPoints2f	    
-		calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);
-	    cout << "310" << endl;
-	    int boxIdx = BoxIds[BboxNum]; 
-	    cout << "312" << endl;
-	    Rect _deletedBbox = Bboxes[BboxNum]; 
-	    cout << "Calling deleteBox() " << endl;				
-		int currentScore = deleteBox(boxIdx);
-		cout << "deleteBox() finished" << endl;
-		Bboxes.push_back(_deletedBbox); 
-		BoxScores.push_back(currentScore); 
+			// convert the Keypoints to Points2f for optical flow tracking
+			KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
+			// optical flow, track currentPoints2f, give out nextPoints2f	    
+			calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);
+		    
+		    int boxIdx = BoxIds[BboxNum]; 
+		    
+		    Rect _deletedBbox = Bboxes[BboxNum]; 
+		    cout << "Calling deleteBox() " << endl;				
+			int currentScore = deleteBox(boxIdx);
+			cout << "deleteBox() finished" << endl;
+			Bboxes.push_back(_deletedBbox); 
+			BoxScores.push_back(currentScore); 
 
-	    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
-	    for(int j = 0; j < (int)nextPoints2f.size(); j++){
-	    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
-	    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
-	    	nextKeypoints.push_back(nextOneKeyPoint); 
-			allNextKeypoints.push_back(nextKeypoints[j]);
-			PointIds.push_back(boxIdx); 
+		    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
+		    for(int j = 0; j < (int)nextPoints2f.size(); j++){
+		    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
+		    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
+		    	nextKeypoints.push_back(nextOneKeyPoint); 
+				allNextKeypoints.push_back(nextKeypoints[j]);
+				PointIds.push_back(boxIdx); 
+			}
+			BoxIds.push_back(boxIdx);
+			PointNums.push_back((int)nextPoints2f.size());
+			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
+			if( (int)PointNums.size() == 1){
+				PointNumsTillThisBbox.push_back( 0 );
+			}else if((int)PointNums.size() == ((int)Bboxes.size())){
+				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
+				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
+			}else{
+				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
+			}
+
+			cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
+			cout << "BoxId in this Bbox " << BboxNum << endl; 
+			cout << "PointNumsTillThisBbox has size " << PointNumsTillThisBbox.size() << endl; 
+			cout << "The current element of PointNumsTillThisBbox is " << PointNumsTillThisBbox[BboxNum] << endl; 
+			cout << "PointIds(all the same) in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << endl; 
+			cout << "All together #PointIds add in this Bbox(PointNums) " << PointNums[BboxNum] << endl;
+			cout << "-----------------" << endl << "SingleTracker ended" << endl << "--------------" << endl; 
+			// substitute Keypoints with nextKeypoints
+			// Keypoints.clear();
+			// for(int j = 0; j < (int)nextKeypoints.size(); j++){
+			// 	Keypoints.push_back(nextKeypoints[j]); 
+			// }
 		}
-		BoxIds.push_back(boxIdx);
-		PointNums.push_back((int)nextPoints2f.size());
-		// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
-		if( (int)PointNums.size() == 1){
-			PointNumsTillThisBbox.push_back( 0 );
-		}else if((int)PointNums.size() == ((int)Bboxes.size())){
-			PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-			PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
-		}else{
-			PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-		}
 
-		cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
-		cout << "BoxId in this Bbox " << BboxNum << endl; 
-		cout << "PointNumsTillThisBbox has size " << PointNumsTillThisBbox.size() << endl; 
-		cout << "The last element of PointNumsTillThisBbox is " << PointNumsTillThisBbox[BboxNum] << endl; 
-		cout << "PointIds(all the same) in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << endl; 
-		cout << "All together #PointIds add in this Bbox(PointNums) " << PointNums[BboxNum] << endl;
-		cout << "-----------------" << endl << "SingleTracker ended" << endl << "--------------" << endl; 
-		// substitute Keypoints with nextKeypoints
-		// Keypoints.clear();
-		// for(int j = 0; j < (int)nextKeypoints.size(); j++){
-		// 	Keypoints.push_back(nextKeypoints[j]); 
-		// }
 		
 	}
 	/////addDetection should rearrange allNextKeypoints
@@ -418,12 +475,16 @@ public:
 			_currentScore = BoxScores[indice[j]]; 
 			BoxScores.erase(BoxScores.begin() + indice[j]); 
 			BoxIds.erase(BoxIds.begin() + indice[j]);
-			PointIds.erase(PointIds.begin() + indice[j]); 
-			for(int k = indice[j]+1; k < (int)PointNumsTillThisBbox.size() - 1; k++){
+			PointNums.erase(PointNums.begin() + indice[j]); 
+		
+			for(int k = indice[j]+1; k < (int)PointNumsTillThisBbox.size()-1; k++){
 				PointNumsTillThisBbox[k] = PointNumsTillThisBbox[k-1] + PointNumsTillThisBbox[k+1] - PointNumsTillThisBbox[k];
 			}
-			PointNumsTillThisBbox.erase(PointNumsTillThisBbox.end());
+			 
+			PointNumsTillThisBbox.erase(PointNumsTillThisBbox.begin() + PointNumsTillThisBbox.size() - 1);
+			
 		}
+			 
 		vector<int> indices; 
 		indices = findIndices(PointIds, _boxIdx); 
 		for(int k = 0; k < (int)indices.size(); k++){
