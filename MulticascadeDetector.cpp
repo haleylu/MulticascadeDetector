@@ -238,7 +238,7 @@ public:
 			// 	cout << "nextPoints, " << j << " x = " << nextPoints2f[j].x << ///
 			// 	" y = " << nextPoints2f[j].y << endl;
 			// }
-			cout << "allNextKeypoints has member " << allNextKeypoints.size() << endl; 
+			cout << "allNextKeypoints.size() = " << allNextKeypoints.size() << endl; 
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
@@ -344,6 +344,7 @@ public:
 		//int nextId = 0; 
 		for(int j = 0; j < (int)_bboxes.size(); j++){
 			int boxIdx = findMatchingBox(_bboxes[j]); 
+
 			if (boxIdx == NOTHING){
 				Bboxes.push_back(_bboxes[j]);
 				cout << "push_back a box " << j << endl; 
@@ -376,20 +377,10 @@ public:
 
 			}
 			else{
-				cout << "deleting " << endl;				
+				cout << "Calling deleteBox() " << endl;				
 				int currentScore = deleteBox(boxIdx);
-
-				// hua ji 
-				cout << "boxIdx " << boxIdx << endl;
-				for(int k = 0; k < (int)BoxIds.size(); k++){
-					cout << BoxIds[k] << endl; 
-				}
-				cout << "PointNums vector size " << PointNums.size() << endl; 
-				for (int k = 0; k < (int)PointNums.size(); k++){
-					cout << PointNums[k] << endl; 
-				}
-
-				cout <<"ike" << endl;  
+				cout << "deleteBox() finished" << endl;
+				
 				Bboxes.push_back(_bboxes[j]); 
 				BoxScores.push_back(currentScore); 
 				
@@ -402,16 +393,14 @@ public:
 		vector<int> indices; 
 		indices = findIndices(BoxIds, _boxIdx); 
 		int _currentScore;
-		cout << "CURRENT BoxIds" <<endl; 
-		for(int k = 0; k < (int)BoxIds.size(); k++){
+		cout << "Bboxes's Id before deleteBox" <<endl; 
+		for(int k = 0; k < (int)Bboxes.size(); k++){
 			cout << BoxIds[k] << endl;
 		}
-		cout << "indices size " << indices.size() << endl;
-		if((int)indices.size() != 0 ){
-			cout << "indices number " << indices[0] << endl;
-			//return ; 
-			}  
+		cout << "deleting indices has size " << indices.size() << endl;
+		cout < "---==---" << endl;
 		for(int j = 0; j < (int)indices.size(); j++){
+			cout << "indices number " << indices[0] << endl;
 			cout << "BboxesNum " << Bboxes.size() << endl;
 			Bboxes.erase(Bboxes.begin() + indices[j]); 
 			cout << "BboxesNum after erase " << Bboxes.size() << endl; 
@@ -419,15 +408,11 @@ public:
 			BoxScores.erase(BoxScores.begin() + indices[j]); 
 			// BoxIds.erase(BoxIds.begin() + indices[j]); 
 		}
-		cout << "CURRENT BoxIds" <<endl; 
-		for(int k = 0; k < (int)BoxIds.size(); k++){
+		cout <<"---==---" << endl;
+		cout << "Bboxes's Id after deleteBox" <<endl; 
+		for(int k = 0; k < (int)Bboxes.size(); k++){
 			cout << BoxIds[k] << endl;
 		}
-		// indices.clear(); 
-		// indices = findIndices(PointIds, boxIdx); 
-		// for(int j = 0; j < (int)indices.size(); j++){
-
-		// }
 		return _currentScore; 
 	}
 	vector<int> findIndices(vector<int> BoxIdsOrPointIds, int _boxIdx){
@@ -446,11 +431,11 @@ public:
 			if(area > 0.8 * Bboxes[i].width * Bboxes[i].height){
 				BoxIdx = BoxIds[i]; // Here's the problem
 				//BoxIdx = 111; 
-				cout << "BoxIdx returned " << BoxIdx << endl; 
+				cout << "(findMatchingBox) BoxIdx returned " << BoxIdx << endl; 
 				return BoxIdx; 
 			}
 		}
-		cout << "BoxIdx returned " << NOTHING << endl;
+		cout << "(findMatchingBox) BoxIdx returned " << NOTHING << endl;
 		return NOTHING; 
 	}
 
