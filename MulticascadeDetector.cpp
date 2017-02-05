@@ -204,18 +204,18 @@ public:
 
 			addDetection(oldframe, bboxes); // rearrange all the 5 variables
 			cout << "--------------------" << endl;
-			PointNumsTillThisBbox.clear();
-	    	PointIds.clear(); 
-	    	PointNums.clear();
-	    	BoxIds.clear(); 
-	    	allNextKeypoints.clear();
+			// PointNumsTillThisBbox.clear();
+	  //   	PointIds.clear(); 
+	  //   	PointNums.clear();
+	  //   	BoxIds.clear(); 
+	  //   	allNextKeypoints.clear();
 	    	 
 	    	cout << "After addDetection(), Bboxes has size = " << Bboxes.size() << endl;
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
-				if((int)Keypoints.size() == 0 ){
-					break;
-				}
+				// if((int)Keypoints.size() == 0 ){
+				// 	break;
+				// }
 			}
 		 
 			// draw all the point at a time
@@ -260,6 +260,7 @@ public:
 	    nextPoints2f.clear();
 
 	    if(RedetectPointsFlag == 0){
+
 	    	// every 10 frames, detect feature points in given Bbox, 
 	    	// give back Keypoints as feature points in given Bbox. 
 	    	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
@@ -290,13 +291,15 @@ public:
 	
 	     }
 	     
-	    // if(Keypoints.size() == 0){
-	    // 	Bboxes.erase(Bboxes.begin() + BboxNum); 
-	    // 	return;
-	    // }
+	    // PointNumsTillThisBbox.clear();
+    	// PointIds.clear(); 
+    	// PointNums.clear();
+    	// BoxIds.clear(); 
+    	// allNextKeypoints.clear();
 
 	    // draw Keypoints in this Bbox in "Feature Points" window
 		Mat Key_frame;
+		cout << "302" << endl;
 		drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 		imshow("Feature Points", Key_frame); 
 
@@ -304,15 +307,25 @@ public:
 		KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
 		// optical flow, track currentPoints2f, give out nextPoints2f	    
 		calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);
-	    // construct nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
+	    cout << "310" << endl;
+	    int boxIdx = BoxIds[BboxNum]; 
+	    cout << "312" << endl;
+	    Rect _deletedBbox = Bboxes[BboxNum]; 
+	    cout << "Calling deleteBox() " << endl;				
+		int currentScore = deleteBox(boxIdx);
+		cout << "deleteBox() finished" << endl;
+		Bboxes.push_back(_deletedBbox); 
+		BoxScores.push_back(currentScore); 
+
+	    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
 	    for(int j = 0; j < (int)nextPoints2f.size(); j++){
 	    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
 	    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
 	    	nextKeypoints.push_back(nextOneKeyPoint); 
 			allNextKeypoints.push_back(nextKeypoints[j]);
-			PointIds.push_back(BboxNum); 
+			PointIds.push_back(boxIdx); 
 		}
-		BoxIds.push_back(BboxNum);
+		BoxIds.push_back(boxIdx);
 		PointNums.push_back((int)nextPoints2f.size());
 		// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
 		if( (int)PointNums.size() == 1){
@@ -349,32 +362,8 @@ public:
 				Bboxes.push_back(_bboxes[j]);
 				cout << "push_back a box " << j << endl; 
 				BoxScores.push_back(1); 
-				// detector
-				// Mat oldframe_gray; 
-				// cvtColor(_Frame, oldframe_gray, CV_BGR2GRAY );
-			 //    equalizeHist( oldframe_gray, oldframe_gray );
-				// Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
-			 //    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
-			 //    ROI = Scalar(255,255,255);
-			 //    double MinHessian = 400;
-			 //    int octaves = 3;
-			 //    int octaveLayers = 6;
-			 //    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
-				// vector<cv::KeyPoint> _Keypoints;
-				// sDetector.detect(oldframe_gray, _Keypoints, Mask);
 
-				// cout << "size : " << _Keypoints.size() << endl;
-
-				// BoxIds.push_back(nextId); 
-				// nextId ++; 
-
-				// PointNums.push_back((int)_Keypoints.size()); 
-				// for(int j = 0; j < (int)_Keypoints.size(); j++){
-				// 	PointIds
-				// }
-				// PointNumsTillThisBbox
-
-
+				
 			}
 			else{
 				cout << "Calling deleteBox() " << endl;				
@@ -384,29 +373,62 @@ public:
 				Bboxes.push_back(_bboxes[j]); 
 				BoxScores.push_back(currentScore); 
 				
+
+				// find feature points to update other variables
+				vector<cv::KeyPoint> Keypoints;
+				Mat Mask = Mat::zeros(_Frame.size(), CV_8U); 
+			    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
+			    ROI = Scalar(255,255,255);
+			    Mat frame_gray;
+				cvtColor( _Frame, frame_gray, CV_BGR2GRAY );
+			    equalizeHist( frame_gray, frame_gray );
+			    double MinHessian = 400;
+			    int octaves = 3;
+			    int octaveLayers = 6;
+			    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
+				sDetector.detect(frame_gray, Keypoints, Mask);
+				for(int k = 0; k < (int)Keypoints.size(); k++){ 
+					allNextKeypoints.push_back(Keypoints[j]);
+					PointIds.push_back(boxIdx); 
+				}
+				BoxIds.push_back(boxIdx);
+				PointNums.push_back((int)Keypoints.size());
+				// make PointNumsTillThisBox 1 longer
+				PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
 			}
 		}		
 		
 	}
 
 	int deleteBox(int _boxIdx){
-		vector<int> indices; 
-		indices = findIndices(BoxIds, _boxIdx); 
+		vector<int> indice; 
+		indice = findIndices(BoxIds, _boxIdx); 
 		int _currentScore;
 		cout << "Bboxes's Id before deleteBox" <<endl; 
 		for(int k = 0; k < (int)Bboxes.size(); k++){
 			cout << BoxIds[k] << endl;
 		}
-		cout << "deleting indices has size " << indices.size() << endl;
-		cout < "---==---" << endl;
-		for(int j = 0; j < (int)indices.size(); j++){
-			cout << "indices number " << indices[0] << endl;
+		cout << "deleting indices has size " << indice.size() << endl;
+		cout << "---==---" << endl;
+		for(int j = 0; j < (int)indice.size(); j++){ // actually size will only be 1 in this case
+			cout << "indice number " << indice[0] << endl;
 			cout << "BboxesNum " << Bboxes.size() << endl;
-			Bboxes.erase(Bboxes.begin() + indices[j]); 
+			Bboxes.erase(Bboxes.begin() + indice[j]); 
 			cout << "BboxesNum after erase " << Bboxes.size() << endl; 
-			_currentScore = BoxScores[indices[j]]; 
-			BoxScores.erase(BoxScores.begin() + indices[j]); 
-			// BoxIds.erase(BoxIds.begin() + indices[j]); 
+			_currentScore = BoxScores[indice[j]]; 
+			BoxScores.erase(BoxScores.begin() + indice[j]); 
+			BoxIds.erase(BoxIds.begin() + indice[j]);
+			PointIds.erase(PointIds.begin() + indice[j]); 
+			for(int k = indice[j]+1; k < (int)PointNumsTillThisBbox.size() - 1; k++){
+				PointNumsTillThisBbox[k] = PointNumsTillThisBbox[k-1] + PointNumsTillThisBbox[k+1] - PointNumsTillThisBbox[k];
+			}
+			PointNumsTillThisBbox.erase(PointNumsTillThisBbox.end());
+		}
+		vector<int> indices; 
+		indices = findIndices(PointIds, _boxIdx); 
+		for(int k = 0; k < (int)indices.size(); k++){
+			PointIds.erase(PointIds.begin() + indices[k]); 
+			allNextKeypoints.erase(allNextKeypoints.begin() + indices[k]); 
 		}
 		cout <<"---==---" << endl;
 		cout << "Bboxes's Id after deleteBox" <<endl; 
