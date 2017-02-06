@@ -201,23 +201,15 @@ public:
 	    	cout << "All togeether " << bboxes.size() << " bboxes" << endl; 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
-			cout << "-------------------" << endl;
-			int lastBboxNum = (int)Bboxes.size(); 
-			addDetection(oldframe, frame, bboxes); // rearrange all the 5 variables
-			
-			// PointNumsTillThisBbox.clear();
-	  //   	PointIds.clear(); 
-	  //   	PointNums.clear();
-	  //   	BoxIds.clear(); 
-	  //   	allNextKeypoints.clear();
-	    	 
-	    	cout << "After addDetection(), Bboxes has size = " << Bboxes.size() << endl;
-			cout << "--------------------" << endl;
+			cout << "-------------------" << endl; 
+
+			for(int j = 0; j < (int)bboxes.size(); j++){
+				addDetection(oldframe, frame, bboxes[j]); 
+				cout << "After addDetection(), Bboxes has size = " << Bboxes.size() << endl;
+				cout << "--------------------" << endl;
+			}
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
-				// if((int)Keypoints.size() == 0 ){
-				// 	break;
-				// }
 			}
 		 
 			// draw all the point at a time
@@ -255,25 +247,26 @@ public:
 	}
 
 	void SingleTracker(Mat _oldframe, Mat _frame, int BboxNum){
-		// prepare oldframe_gray
-		Mat oldframe_gray; 
-		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
-	    equalizeHist( oldframe_gray, oldframe_gray );
-	    // prepare frame_gray
-	    Mat frame_gray;
-		cvtColor( _frame, frame_gray, CV_BGR2GRAY );
-	    equalizeHist( frame_gray, frame_gray );
-
-    	Keypoints.clear();
-    	currentPoints2f.clear(); 
-	    nextPoints2f.clear();
-	    nextKeypoints.clear();
-	    if(RedetectPointsFlag == 0){
-
+		
+		if(RedetectPointsFlag == 0){
 	    	// move this part to addDetection() 
 	    	
 
-	     }else{
+	    }else{
+	     	// prepare oldframe_gray
+			Mat oldframe_gray; 
+			cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
+		    equalizeHist( oldframe_gray, oldframe_gray );
+		    // prepare frame_gray
+		    Mat frame_gray;
+			cvtColor( _frame, frame_gray, CV_BGR2GRAY );
+		    equalizeHist( frame_gray, frame_gray );
+
+	    	Keypoints.clear();
+	    	currentPoints2f.clear(); 
+		    nextPoints2f.clear();
+		    nextKeypoints.clear();
+	    
 		    //cout << "reached 266" << endl;
 		    // if( (int)PointNumsTillThisBbox.size() < (BboxNum-1)){
 		    // 	return; ///////okashi
@@ -355,10 +348,10 @@ public:
 		
 	}
 	/////addDetection should rearrange allNextKeypoints
-	void addDetection(Mat _oldframe, Mat _frame,vector<Rect> _bboxes){ //seems tracker in CV is a function
+	void addDetection(Mat _oldframe, Mat _frame,Rect _bboxes){ //seems tracker in CV is a function
 		//assume bboxes are already there
 		//int nextId = 0; 
-
+		cout << "======================"<<"start addDectection" <<endl;
 		Mat oldframe_gray; 
 		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
 	    equalizeHist( oldframe_gray, oldframe_gray );
@@ -372,17 +365,17 @@ public:
 	    nextPoints2f.clear();
 	    nextKeypoints.clear();
 
-		for(int j = 0; j < (int)_bboxes.size(); j++){
-			int boxIdx = findMatchingBox(_bboxes[j]); 
+		
+			int boxIdx = findMatchingBox(_bboxes); 
 
 			if (boxIdx == NOTHING){
-				Bboxes.push_back(_bboxes[j]);
-				cout << "push_back a box " << j+1 << endl; 
+				Bboxes.push_back(_bboxes);
+				cout << "push_back a box " << endl; 
 				BoxScores.push_back(1); 
 				 
 
 				Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
-			    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
+			    Mat ROI(Mask, _bboxes);// init the mask matrix
 			    ROI = Scalar(255,255,255);
 			    double MinHessian = 400;
 			    int octaves = 3;
@@ -391,7 +384,7 @@ public:
 				sDetector.detect(oldframe_gray, Keypoints, Mask);
 
 				for(int k = 0; k < (int)Keypoints.size(); k++){ 
-					allNextKeypoints.push_back(Keypoints[j]);
+					allNextKeypoints.push_back(Keypoints[k]);
 					PointIds.push_back(nextId); 
 				}
 				BoxIds.push_back(nextId);
@@ -409,21 +402,21 @@ public:
 
 				
 				nextId++;
-				flagForAddDetection = 1; 
+				//flagForAddDetection = 1; 
 			}
 			else{
 				cout << "Calling deleteBox() " << endl;				
 				int currentScore = deleteBox(boxIdx);
 				cout << "deleteBox() finished" << endl;
 				
-				Bboxes.push_back(_bboxes[j]); 
+				Bboxes.push_back(_bboxes); 
 				BoxScores.push_back(currentScore); 
 				
 
 				// find feature points to update other variables
 				
 				Mat Mask = Mat::zeros(_frame.size(), CV_8U); 
-			    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
+			    Mat ROI(Mask, _bboxes);// init the mask matrix
 			    ROI = Scalar(255,255,255);
 			    Mat frame_gray;
 				cvtColor( _frame, frame_gray, CV_BGR2GRAY );
@@ -434,7 +427,7 @@ public:
 			    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
 				sDetector.detect(frame_gray, Keypoints, Mask);
 				for(int k = 0; k < (int)Keypoints.size(); k++){ 
-					allNextKeypoints.push_back(Keypoints[j]);
+					allNextKeypoints.push_back(Keypoints[k]);
 					PointIds.push_back(boxIdx); 
 				}
 				BoxIds.push_back(boxIdx);
@@ -442,7 +435,7 @@ public:
 				// make PointNumsTillThisBox 1 longer
 				PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
 			}
-		}		
+		
 		
 	}
 
