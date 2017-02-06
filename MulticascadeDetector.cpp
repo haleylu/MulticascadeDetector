@@ -16,7 +16,7 @@
 //test git 2
 using namespace std;
 using namespace cv;
-#define NOTHING 42
+#define NOTHING -1
 
 class MulticascadeDetector{
 
@@ -45,7 +45,7 @@ public:
 	vector<int> PointNumsTillThisBbox; 
 	vector<int> BoxScores; 
 	vector<vector <int> > bbox1;
-	int NextId; 
+	int nextId; 
 	int area; 
 	int BoxIdx; 
 
@@ -113,7 +113,7 @@ public:
 		vector<vector <int> > Points(500, vector<int>(4));
 		std::vector<int> PointIds(500,8);
 		std::vector<int> BoxScores(500); 
-		NextId = 1;
+		nextId = 1;
 		vector<vector <int> > bbox1(500, std::vector<int>(4)); 
 		area = 0; 
 		BoxIdx = 0; 
@@ -201,9 +201,10 @@ public:
 	    	cout << "All togeether " << bboxes.size() << " bboxes" << endl; 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
-
-			addDetection(oldframe, bboxes); // rearrange all the 5 variables
-			cout << "--------------------" << endl;
+			cout << "-------------------" << endl;
+			int lastBboxNum = (int)Bboxes.size(); 
+			addDetection(oldframe, frame, bboxes); // rearrange all the 5 variables
+			
 			// PointNumsTillThisBbox.clear();
 	  //   	PointIds.clear(); 
 	  //   	PointNums.clear();
@@ -211,6 +212,7 @@ public:
 	  //   	allNextKeypoints.clear();
 	    	 
 	    	cout << "After addDetection(), Bboxes has size = " << Bboxes.size() << endl;
+			cout << "--------------------" << endl;
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
 				// if((int)Keypoints.size() == 0 ){
@@ -268,64 +270,8 @@ public:
 	    nextKeypoints.clear();
 	    if(RedetectPointsFlag == 0){
 
-	    	// every 10 frames, detect feature points in given Bbox, 
-	    	// give back Keypoints as feature points in given Bbox. 
-	    	Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
-		    Mat ROI(Mask, Bboxes[BboxNum]);// init the mask matrix
-		    ROI = Scalar(255,255,255);
-		    double MinHessian = 400;
-		    int octaves = 3;
-		    int octaveLayers = 6;
-		    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
-			sDetector.detect(oldframe_gray, Keypoints, Mask);
-
-			
-
-			// draw Keypoints in this Bbox in "Feature Points" window
-			Mat Key_frame;
-			drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-			imshow("Feature Points", Key_frame); 
-
-			// convert the Keypoints to Points2f for optical flow tracking
-			KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
-			// optical flow, track currentPoints2f, give out nextPoints2f	    
-			calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);
-		    
-		    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
-		    for(int j = 0; j < (int)nextPoints2f.size(); j++){
-		    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
-		    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
-		    	nextKeypoints.push_back(nextOneKeyPoint); 
-				allNextKeypoints.push_back(nextKeypoints[j]);
-				PointIds.push_back(BboxNum); 
-			}
-			BoxIds.push_back(BboxNum);
-			PointNums.push_back((int)nextPoints2f.size());
-			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
-			if( (int)PointNums.size() == 1){
-				cout << "1 case" << endl; 
-				PointNumsTillThisBbox.push_back( 0 );
-			}else if((int)PointNums.size() == ((int)Bboxes.size())){
-				cout << "end case" << endl; 
-				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
-			}else{
-				cout << "middle" << endl; 
-				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-			}
-
-			cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
-			cout << "BoxId in this Bbox " << BboxNum << endl; 
-			cout << "PointNumsTillThisBbox has size " << PointNumsTillThisBbox.size() << endl; 
-			cout << "The current element of PointNumsTillThisBbox is " << PointNumsTillThisBbox[BboxNum] << endl; 
-			cout << "PointIds(all the same) in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << endl; 
-			cout << "All together #PointIds add in this Bbox(PointNums) " << PointNums[BboxNum] << endl;
-			cout << "-----------------" << endl << "SingleTracker ended" << endl << "--------------" << endl; 
-			// substitute Keypoints with nextKeypoints
-			// Keypoints.clear();
-			// for(int j = 0; j < (int)nextKeypoints.size(); j++){
-			// 	Keypoints.push_back(nextKeypoints[j]); 
-			// }
+	    	// move this part to addDetection() 
+	    	
 
 	     }else{
 		    //cout << "reached 266" << endl;
@@ -354,7 +300,6 @@ public:
 
 		    // draw Keypoints in this Bbox in "Feature Points" window
 			Mat Key_frame;
-			cout << "302" << endl;
 			drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("Feature Points", Key_frame); 
 
@@ -383,17 +328,18 @@ public:
 			BoxIds.push_back(boxIdx);
 			PointNums.push_back((int)nextPoints2f.size());
 			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
-			if( (int)PointNums.size() == 1){
-				PointNumsTillThisBbox.push_back( 0 );
-			}else if((int)PointNums.size() == ((int)Bboxes.size())){
-				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
-			}else{
-				PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-			}
-
+			// if( (int)PointNums.size() == 1){
+			// 	PointNumsTillThisBbox.push_back( 0 );
+			// }else if((int)PointNums.size() == ((int)Bboxes.size())){
+			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
+			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
+			// }else{
+			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
+			// }
+			PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
+			
 			cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
-			cout << "BoxId in this Bbox " << BboxNum << endl; 
+			cout << "BoxId in this Bbox " << BoxIds[BoxIds.size()-1] << endl; 
 			cout << "PointNumsTillThisBbox has size " << PointNumsTillThisBbox.size() << endl; 
 			cout << "The current element of PointNumsTillThisBbox is " << PointNumsTillThisBbox[BboxNum] << endl; 
 			cout << "PointIds(all the same) in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << endl; 
@@ -409,18 +355,61 @@ public:
 		
 	}
 	/////addDetection should rearrange allNextKeypoints
-	void addDetection(Mat _Frame, vector<Rect> _bboxes){ //seems tracker in CV is a function
+	void addDetection(Mat _oldframe, Mat _frame,vector<Rect> _bboxes){ //seems tracker in CV is a function
 		//assume bboxes are already there
 		//int nextId = 0; 
+
+		Mat oldframe_gray; 
+		cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
+	    equalizeHist( oldframe_gray, oldframe_gray );
+	    // prepare frame_gray
+	    Mat frame_gray;
+		cvtColor( _frame, frame_gray, CV_BGR2GRAY );
+	    equalizeHist( frame_gray, frame_gray );
+
+    	Keypoints.clear();
+    	currentPoints2f.clear(); 
+	    nextPoints2f.clear();
+	    nextKeypoints.clear();
+
 		for(int j = 0; j < (int)_bboxes.size(); j++){
 			int boxIdx = findMatchingBox(_bboxes[j]); 
 
 			if (boxIdx == NOTHING){
 				Bboxes.push_back(_bboxes[j]);
-				cout << "push_back a box " << j << endl; 
+				cout << "push_back a box " << j+1 << endl; 
 				BoxScores.push_back(1); 
+				 
+
+				Mat Mask = Mat::zeros(_oldframe.size(), CV_8U); 
+			    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
+			    ROI = Scalar(255,255,255);
+			    double MinHessian = 400;
+			    int octaves = 3;
+			    int octaveLayers = 6;
+			    SurfFeatureDetector sDetector(MinHessian, octaves, octaveLayers);
+				sDetector.detect(oldframe_gray, Keypoints, Mask);
+
+				for(int k = 0; k < (int)Keypoints.size(); k++){ 
+					allNextKeypoints.push_back(Keypoints[j]);
+					PointIds.push_back(nextId); 
+				}
+				BoxIds.push_back(nextId);
+				PointNums.push_back((int)Keypoints.size());
+				
+				// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
+				if( (int)PointNums.size() == 1){
+					cout << "1 case" << endl; 
+					PointNumsTillThisBbox.push_back( 0 );
+					PointNumsTillThisBbox.push_back( PointNums[0] );
+				}else{
+					cout << "end case" << endl; 
+					PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
+					}
 
 				
+				nextId++;
+				flagForAddDetection = 1; 
 			}
 			else{
 				cout << "Calling deleteBox() " << endl;				
@@ -432,12 +421,12 @@ public:
 				
 
 				// find feature points to update other variables
-				vector<cv::KeyPoint> Keypoints;
-				Mat Mask = Mat::zeros(_Frame.size(), CV_8U); 
+				
+				Mat Mask = Mat::zeros(_frame.size(), CV_8U); 
 			    Mat ROI(Mask, _bboxes[j]);// init the mask matrix
 			    ROI = Scalar(255,255,255);
 			    Mat frame_gray;
-				cvtColor( _Frame, frame_gray, CV_BGR2GRAY );
+				cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 			    equalizeHist( frame_gray, frame_gray );
 			    double MinHessian = 400;
 			    int octaves = 3;
@@ -458,6 +447,7 @@ public:
 	}
 
 	int deleteBox(int _boxIdx){
+		cout << "---==---" << endl;
 		vector<int> indice; 
 		indice = findIndices(BoxIds, _boxIdx); 
 		int _currentScore;
@@ -466,7 +456,7 @@ public:
 			cout << BoxIds[k] << endl;
 		}
 		cout << "deleting indices has size " << indice.size() << endl;
-		cout << "---==---" << endl;
+		
 		for(int j = 0; j < (int)indice.size(); j++){ // actually size will only be 1 in this case
 			cout << "indice number " << indice[0] << endl;
 			cout << "BboxesNum " << Bboxes.size() << endl;
