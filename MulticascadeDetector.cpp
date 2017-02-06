@@ -303,23 +303,19 @@ public:
 		    
 		    int boxIdx = BoxIds[BboxNum]; 
 		    
-		    Rect _deletedBbox = Bboxes[BboxNum]; 
-		    cout << "Calling deleteBox() " << endl;				
-			int currentScore = deleteBox(boxIdx);
-			cout << "deleteBox() finished" << endl;
-			Bboxes.push_back(_deletedBbox); 
-			BoxScores.push_back(currentScore); 
+		    // Rect _deletedBbox = Bboxes[BboxNum]; 
+		     
 
 		    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
 		    for(int j = 0; j < (int)nextPoints2f.size(); j++){
 		    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
 		    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
 		    	nextKeypoints.push_back(nextOneKeyPoint); 
-				allNextKeypoints.push_back(nextKeypoints[j]);
-				PointIds.push_back(boxIdx); 
+				allNextKeypoints[PointNumsTillThisBbox[boxIdx] + j] = nextKeypoints[j];
+				//PointIds.push_back(boxIdx);  should remain unchanged
 			}
-			BoxIds.push_back(boxIdx);
-			PointNums.push_back((int)nextPoints2f.size());
+			//BoxIds.push_back(boxIdx);
+			//PointNums.push_back((int)nextPoints2f.size());
 			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
 			// if( (int)PointNums.size() == 1){
 			// 	PointNumsTillThisBbox.push_back( 0 );
@@ -329,7 +325,7 @@ public:
 			// }else{
 			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
 			// }
-			PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
+			//PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
 			
 			cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
 			cout << "BoxId in this Bbox " << BoxIds[BoxIds.size()-1] << endl; 
@@ -459,26 +455,53 @@ public:
 			BoxScores.erase(BoxScores.begin() + indice[j]); 
 			BoxIds.erase(BoxIds.begin() + indice[j]);
 			PointNums.erase(PointNums.begin() + indice[j]); 
-		
+			
 			for(int k = indice[j]+1; k < (int)PointNumsTillThisBbox.size()-1; k++){
 				PointNumsTillThisBbox[k] = PointNumsTillThisBbox[k-1] + PointNumsTillThisBbox[k+1] - PointNumsTillThisBbox[k];
 			}
-			 
-			PointNumsTillThisBbox.erase(PointNumsTillThisBbox.begin() + PointNumsTillThisBbox.size() - 1);
 			
+			PointNumsTillThisBbox.erase(PointNumsTillThisBbox.begin() + PointNumsTillThisBbox.size() - 1);
+			cout << "464" << endl;
 		}
 			 
 		vector<int> indices; 
+		cout << "_boxIdx = " << _boxIdx << endl;
 		indices = findIndices(PointIds, _boxIdx); 
-		for(int k = 0; k < (int)indices.size(); k++){
-			PointIds.erase(PointIds.begin() + indices[k]); 
-			allNextKeypoints.erase(allNextKeypoints.begin() + indices[k]); 
+		cout << "indices.size() = " << indices.size() << endl;
+		cout << "PointIds START +++++++++++++++++++++" << endl;
+		for(int jj = 0; jj < (int)PointIds.size(); jj++){
+			
+			cout << PointIds[jj] << " ";
+
 		}
+		cout << endl << "PointIds END +++++++++++++++++++++" << endl;
+
+		cout << "indices START +++++++++++++++++++++" << endl;
+		for(int jj = 0; jj < (int)indices.size(); jj++){
+			
+			cout << indices[jj] << " ";
+
+		}
+		cout << endl << "indices END +++++++++++++++++++++" << endl;
+		for(int k = 0; k < (int)indices.size(); k++){
+			PointIds.erase(PointIds.begin() + indices[0]); 
+			allNextKeypoints.erase(allNextKeypoints.begin() + indices[0]); 
+		}
+		
+		cout << "AFTER PointIds START +++++++++++++++++++++" << endl;
+		for(int jj = 0; jj < (int)PointIds.size(); jj++){
+			
+			cout << PointIds[jj] << " ";
+
+		}
+		cout << endl << "AFTER PointIds END +++++++++++++++++++++" << endl;
+
 		cout <<"---==---" << endl;
 		cout << "Bboxes's Id after deleteBox" <<endl; 
 		for(int k = 0; k < (int)Bboxes.size(); k++){
 			cout << BoxIds[k] << endl;
 		}
+	
 		return _currentScore; 
 	}
 	vector<int> findIndices(vector<int> BoxIdsOrPointIds, int _boxIdx){
