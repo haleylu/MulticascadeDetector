@@ -17,6 +17,9 @@
 using namespace std;
 using namespace cv;
 #define NOTHING -1
+#define AREA_RATIO 0.2
+#define SIZE_OF_ALL_POINTS 8000
+#define SIZE_OF_ALL_BBOXES 800
 
 class MulticascadeDetector{
 
@@ -35,14 +38,16 @@ public:
 	int flag;
 
 	// MATLAB re-creating
-	vector< Rect > Bboxes; 
+	 
 	vector<Rect> bboxes; 
+
+	vector< Rect > Bboxes;
 	vector<int> BoxIds; 
-	vector<vector <int> > Points;
 	vector<int> PointIds;
 	vector<int> PointNums; 
 	vector<int> PointNumsTillThisBbox; 
 	vector<int> BoxScores; 
+
 	vector<vector <int> > bbox1;
 	int nextId; 
 	int area; 
@@ -57,12 +62,7 @@ public:
 
 	vector <float> err;
     vector <uchar> Status;
-    // Size WinSize;
-    // int maxLevel;
-    // TermCriteria termcrit;
-    // int flags;
-    // double minEigThreshold;
-    vector< vector<int> > currentPoints; 
+
     vector< vector<int> > nextPoints; 
     vector<int> pIDs;
     vector<Point2f> currentPoints2f;
@@ -101,10 +101,7 @@ public:
 		// 	Bboxes.push_back(initRect); 
 		// 	bboxes.push_back(initRect);
 		// }
-		std::vector<int> BoxIds(500); 
-		vector<vector <int> > Points(500, vector<int>(4));
-		std::vector<int> PointIds(500,8);
-		std::vector<int> BoxScores(500); 
+		
 		nextId = 1;
 		vector<vector <int> > bbox1(500, std::vector<int>(4)); 
 		area = 0; 
@@ -113,26 +110,28 @@ public:
 	    for(int u = 0; u < 2; u++){
 	    	initer.push_back(0); 
 	    }
-	    for(int u = 0; u < 1000; u++){
-	    	currentPoints.push_back(initer); 	
-	    }
-	    // currentPoints = new vector< std::vector<int> >(1000, std::vector<int>(2));
 
-
-	    // vector<int> initer(2, 0);
-	    // for(int jj = 0; jj < 500; jj++){
-	    // 	currentPoints.push_back(initer);
-	    // }
-    	// for( int u = 0; u < 500; u++){
-    	// 	nextKeypoints.push_back(keyPointIniter);
-    	// }
-    	
     	nextOneKeyPoint.pt.x = 0;
     	nextOneKeyPoint.pt.y = 0; 
 
-    	for( int u = 0; u < 2000; u++){
-    		//allNextKeypoints.push_back(keyPointIniter);
+    	for( int u = 0; u < SIZE_OF_ALL_POINTS; u++){
+    		allNextKeypoints.push_back(keyPointIniter);
     	}
+    	allNextKeypoints.clear();
+    	for( int u = 0; u < SIZE_OF_ALL_BBOXES; u++){
+    		Bboxes.push_back(initRect); 
+    		BoxIds.push_back(0); 
+    		PointIds.push_back(0); 
+    		PointNums.push_back(0);
+    		PointNumsTillThisBbox.push_back(0);
+    		BoxScores.push_back(0);
+    	}
+    	Bboxes.clear(); 
+    	BoxIds.clear();
+    	PointIds.clear();
+    	PointNums.clear();
+    	PointNumsTillThisBbox.clear();
+    	BoxScores.clear();
 	}
 
 	void initDetector(){
@@ -171,34 +170,37 @@ public:
 			cout << endl << endl; 
 			printf("The %dth frame started. \n", i); 
 	    	i++;
-
-			if( !frame.empty() ){ 
-			    loop++; 
-			    // Detect bounding boxes in the frame, save the corrdinates in Bboxes
-			    // then display the Bboxes
-			    detectAndDisplay( frame ); 
-			    // Rearrange Bboxes by left top point.x
-			    sortedBboxesId = sortRectByXAndGiveBackIndexes(bboxes); 
-			    
-			    bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
-			    
-			    
-			}else{ 
-			    printf(" --(!) No captured frame -- Break! \n"); break; 
-			}
-			oldframe = frame.clone(); 
+	    	oldframe = frame.clone(); 
 			cap >> frame; 
 	    	cap >> cap_frame;
 			
 	    	cout << "All togeether " << bboxes.size() << " bboxes" << endl; 
 		    // Find(only once) and track the feature points in two consecutive frames
 			// member "nextPoints2f" is tracked points
-			cout << "-------------------" << endl; 
 
-			for(int j = 0; j < (int)bboxes.size(); j++){
-				addDetection(oldframe, frame, bboxes[j]); 
-				cout << "After addDetection(), Bboxes has size = " << Bboxes.size() << endl;
-				cout << "--------------------" << endl;
+	    	//if(i == 30){break;} //debug you
+	    	if(RedetectPointsFlag == 0){
+				if( !frame.empty() ){ 
+				    loop++; 
+				    // Detect bounding boxes in the frame, save the corrdinates in Bboxes
+				    // then display the Bboxes
+				    detectAndDisplay( frame ); 
+				    // Rearrange Bboxes by left top point.x
+				    sortedBboxesId = sortRectByXAndGiveBackIndexes(bboxes); 
+				    
+				    bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
+				    
+				    
+				}else{ 
+				    printf(" --(!) No captured frame -- Break! \n"); break; 
+				}
+				
+
+				for(int j = 0; j < (int)bboxes.size(); j++){
+					addDetection(oldframe, frame, bboxes[j]); 
+					cout << "After addDetection(), Bboxes has size = " << Bboxes.size() << endl;
+					cout << "--------------------" << endl;
+				}
 			}
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
@@ -206,9 +208,10 @@ public:
 		 	
 			// draw all the point at a time
 			Mat nextKey_frame; 
+
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
-
+			nextKey_frame.release();
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 
 			}
@@ -227,14 +230,14 @@ public:
 			cout << "allNextKeypoints.size() = " << allNextKeypoints.size() << endl; 
 
 			RedetectPointsFlag = 1; // close the Redetect status
-			// if(i%10 == 0){
-			// 	RedetectPointsFlag = 0; 
-			// 	PointNumsTillThisBbox.clear();
-		 //    	PointIds.clear(); 
-		 //    	PointNums.clear();
-		 //    	BoxIds.clear(); 
-		 //    	allNextKeypoints.clear();
-			// }
+			if(i%10 == 0){
+				RedetectPointsFlag = 0; 
+				// PointNumsTillThisBbox.clear();
+		  //   	PointIds.clear(); 
+		  //   	PointNums.clear();
+		  //   	BoxIds.clear(); 
+		  //   	allNextKeypoints.clear();
+			}
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
@@ -527,7 +530,7 @@ public:
 		for(int i = 0; i < (int)Bboxes.size(); i++){
 			////
 			area = computeRectJoinUnion(Bboxes[i], box);
-			if(area > 0.7 * Bboxes[i].width * Bboxes[i].height){
+			if(area > AREA_RATIO * Bboxes[i].width * Bboxes[i].height){
 				BoxIdx = BoxIds[i]; // Here's the problem
 				//BoxIdx = 111; 
 				cout << "(findMatchingBox) BoxIdx returned " << BoxIdx << endl; 
@@ -646,7 +649,7 @@ private:
 		
 		}                   
 	    else{
-		printf("Nothing can be tracked in this frame! \n");
+		//printf("Nothing can be tracked in this frame! \n");
 		//printf("abs_ratio = %f \n", edge_ratio); 
 	        return 0;
 		}
