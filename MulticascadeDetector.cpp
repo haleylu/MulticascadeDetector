@@ -29,8 +29,7 @@ public:
 	RNG rng;
 	std::vector<Rect> _lasttools;
 	std::vector<Rect> _capturedtools;
-	//Mat frame; 
-	//Mat frame_gray;
+
 	Mat cap_frame; 
 	int loop; 
 	int flag;
@@ -50,14 +49,8 @@ public:
 	int BoxIdx; 
 
 	
-	Mat frame_gray;
-    Mat Mask;
-    Mat ROI;
-    double MinHessian;
-    int octaves;
-    int octaveLayers;
+	
     SurfFeatureDetector sDetector;
-	Mat Key_frame; 
 	vector<cv::KeyPoint> Keypoints;
 	vector<cv::KeyPoint> nextKeypoints;
 	vector<cv::KeyPoint> allNextKeypoints; 
@@ -69,7 +62,6 @@ public:
     // TermCriteria termcrit;
     // int flags;
     // double minEigThreshold;
-    Mat nextKey_frame; 
     vector< vector<int> > currentPoints; 
     vector< vector<int> > nextPoints; 
     vector<int> pIDs;
@@ -211,8 +203,9 @@ public:
 			for(int j = 0; j < (int)Bboxes.size(); j++){
 				SingleTracker(oldframe, frame, j);
 			}
-		 
+		 	
 			// draw all the point at a time
+			Mat nextKey_frame; 
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
 
@@ -232,14 +225,14 @@ public:
 			cout << "allNextKeypoints.size() = " << allNextKeypoints.size() << endl; 
 
 			RedetectPointsFlag = 1; // close the Redetect status
-			if(i%10 == 0){
-				RedetectPointsFlag = 0; 
-				PointNumsTillThisBbox.clear();
-		    	PointIds.clear(); 
-		    	PointNums.clear();
-		    	BoxIds.clear(); 
-		    	allNextKeypoints.clear();
-			}
+			// if(i%10 == 0){
+			// 	RedetectPointsFlag = 0; 
+			// 	PointNumsTillThisBbox.clear();
+		 //    	PointIds.clear(); 
+		 //    	PointNums.clear();
+		 //    	BoxIds.clear(); 
+		 //    	allNextKeypoints.clear();
+			// }
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
@@ -254,6 +247,7 @@ public:
 
 	    }else{
 	     	// prepare oldframe_gray
+	     	cout << "250" << endl;
 			Mat oldframe_gray; 
 			cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
 		    equalizeHist( oldframe_gray, oldframe_gray );
@@ -261,12 +255,12 @@ public:
 		    Mat frame_gray;
 			cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 		    equalizeHist( frame_gray, frame_gray );
-
+		    cout << "257" << endl;
 	    	Keypoints.clear();
 	    	currentPoints2f.clear(); 
 		    nextPoints2f.clear();
 		    nextKeypoints.clear();
-	    
+	    	cout << "262" << endl;
 		    //cout << "reached 266" << endl;
 		    // if( (int)PointNumsTillThisBbox.size() < (BboxNum-1)){
 		    // 	return; ///////okashi
@@ -292,10 +286,11 @@ public:
 	    	// allNextKeypoints.clear();
 
 		    // draw Keypoints in this Bbox in "Feature Points" window
+		    cout << "295" <<endl;
 			Mat Key_frame;
 			drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("Feature Points", Key_frame); 
-
+			cout << "299" << endl;
 			// convert the Keypoints to Points2f for optical flow tracking
 			KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
 			// optical flow, track currentPoints2f, give out nextPoints2f	    
@@ -414,9 +409,7 @@ public:
 				Mat Mask = Mat::zeros(_frame.size(), CV_8U); 
 			    Mat ROI(Mask, _bboxes);// init the mask matrix
 			    ROI = Scalar(255,255,255);
-			    Mat frame_gray;
-				cvtColor( _frame, frame_gray, CV_BGR2GRAY );
-			    equalizeHist( frame_gray, frame_gray );
+			   
 			    double MinHessian = 400;
 			    int octaves = 3;
 			    int octaveLayers = 6;
@@ -454,8 +447,7 @@ public:
 			_currentScore = BoxScores[indice[j]]; 
 			BoxScores.erase(BoxScores.begin() + indice[j]); 
 			BoxIds.erase(BoxIds.begin() + indice[j]);
-			PointNums.erase(PointNums.begin() + indice[j]); 
-			
+			PointNums.erase(PointNums.begin() + indice[j]);
 			for(int k = indice[j]+1; k < (int)PointNumsTillThisBbox.size()-1; k++){
 				PointNumsTillThisBbox[k] = PointNumsTillThisBbox[k-1] + PointNumsTillThisBbox[k+1] - PointNumsTillThisBbox[k];
 			}
@@ -469,19 +461,19 @@ public:
 		indices = findIndices(PointIds, _boxIdx); 
 		cout << "indices.size() = " << indices.size() << endl;
 		cout << "PointIds START +++++++++++++++++++++" << endl;
-		for(int jj = 0; jj < (int)PointIds.size(); jj++){
+		// for(int jj = 0; jj < (int)PointIds.size(); jj++){
 			
-			cout << PointIds[jj] << " ";
+		// 	cout << PointIds[jj] << " ";
 
-		}
+		// }
 		cout << endl << "PointIds END +++++++++++++++++++++" << endl;
 
 		cout << "indices START +++++++++++++++++++++" << endl;
-		for(int jj = 0; jj < (int)indices.size(); jj++){
+		// for(int jj = 0; jj < (int)indices.size(); jj++){
 			
-			cout << indices[jj] << " ";
+		// 	cout << indices[jj] << " ";
 
-		}
+		// }
 		cout << endl << "indices END +++++++++++++++++++++" << endl;
 		for(int k = 0; k < (int)indices.size(); k++){
 			PointIds.erase(PointIds.begin() + indices[0]); 
@@ -489,18 +481,18 @@ public:
 		}
 		
 		cout << "AFTER PointIds START +++++++++++++++++++++" << endl;
-		for(int jj = 0; jj < (int)PointIds.size(); jj++){
+		// for(int jj = 0; jj < (int)PointIds.size(); jj++){
 			
-			cout << PointIds[jj] << " ";
+		// 	cout << PointIds[jj] << " ";
 
-		}
+		// }
 		cout << endl << "AFTER PointIds END +++++++++++++++++++++" << endl;
 
 		cout <<"---==---" << endl;
 		cout << "Bboxes's Id after deleteBox" <<endl; 
-		for(int k = 0; k < (int)Bboxes.size(); k++){
-			cout << BoxIds[k] << endl;
-		}
+		// for(int k = 0; k < (int)Bboxes.size(); k++){
+		// 	cout << BoxIds[k] << endl;
+		// }
 	
 		return _currentScore; 
 	}
