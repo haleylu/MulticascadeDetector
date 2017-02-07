@@ -209,7 +209,9 @@ public:
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
 
+			for(int j = 0; j < (int)Bboxes.size(); j++){
 
+			}
 			
 			for( int j = 0; j < (int)Bboxes.size(); j++){
 				cout << "the " << j << "th " << "Bboxes, " << ///
@@ -300,15 +302,26 @@ public:
 		    
 		    // Rect _deletedBbox = Bboxes[BboxNum]; 
 		     
-
+		    int minX = 1000; 
+		    int maxX = 0;
+		    int minY = 1000;
+		    int maxY = 0;
 		    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
 		    for(int j = 0; j < (int)nextPoints2f.size(); j++){
 		    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
 		    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
+		    	if(minX > nextOneKeyPoint.pt.x){minX = nextOneKeyPoint.pt.x;}
+		    	if(maxX < nextOneKeyPoint.pt.x){maxX = nextOneKeyPoint.pt.x;}
+		    	if(minY > nextOneKeyPoint.pt.y){minY = nextOneKeyPoint.pt.y;}
+		    	if(maxY < nextOneKeyPoint.pt.y){maxY = nextOneKeyPoint.pt.y;}
 		    	nextKeypoints.push_back(nextOneKeyPoint); 
 				allNextKeypoints[PointNumsTillThisBbox[boxIdx] + j] = nextKeypoints[j];
 				//PointIds.push_back(boxIdx);  should remain unchanged
 			}
+			Bboxes[BboxNum].x = minX;
+			Bboxes[BboxNum].y = minY;
+			Bboxes[BboxNum].width = maxX-minX;
+			Bboxes[BboxNum].height = maxY-minY;
 			//BoxIds.push_back(boxIdx);
 			//PointNums.push_back((int)nextPoints2f.size());
 			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
@@ -401,7 +414,7 @@ public:
 				cout << "deleteBox() finished" << endl;
 				
 				Bboxes.push_back(_bboxes); 
-				BoxScores.push_back(currentScore); 
+				BoxScores.push_back(currentScore + 1); 
 				
 
 				// find feature points to update other variables
@@ -423,6 +436,7 @@ public:
 				PointNums.push_back((int)Keypoints.size());
 				// make PointNumsTillThisBox 1 longer
 				PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
+				cout << "426" << endl;
 			}
 		
 		
@@ -436,6 +450,10 @@ public:
 		cout << "Bboxes's Id before deleteBox" <<endl; 
 		for(int k = 0; k < (int)Bboxes.size(); k++){
 			cout << BoxIds[k] << endl;
+		}
+		cout << "Bboxes's scores " << endl; 
+		for(int k = 0; k < (int)Bboxes.size(); k++){
+			cout << BoxScores[k] << endl;
 		}
 		cout << "deleting indices has size " << indice.size() << endl;
 		
@@ -509,7 +527,7 @@ public:
 		for(int i = 0; i < (int)Bboxes.size(); i++){
 			////
 			area = computeRectJoinUnion(Bboxes[i], box);
-			if(area > 0.8 * Bboxes[i].width * Bboxes[i].height){
+			if(area > 0.7 * Bboxes[i].width * Bboxes[i].height){
 				BoxIdx = BoxIds[i]; // Here's the problem
 				//BoxIdx = 111; 
 				cout << "(findMatchingBox) BoxIdx returned " << BoxIdx << endl; 
