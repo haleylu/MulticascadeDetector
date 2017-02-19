@@ -17,7 +17,7 @@
 using namespace std;
 using namespace cv;
 #define NOTHING -1
-#define AREA_RATIO 0.2
+#define AREA_RATIO 0.7
 #define SIZE_OF_ALL_POINTS 8000
 #define SIZE_OF_ALL_BBOXES 800
 
@@ -35,8 +35,12 @@ public:
 
 	Mat cap_frame; 
 	int loop; 
-	int flag;
+	int flags;
 
+	int minX;
+	int minY;
+	int maxX;
+	int maxY; 
 	// MATLAB re-creating
 	 
 	vector<Rect> bboxes; 
@@ -87,7 +91,7 @@ public:
 		window_name = "Capture";
 		rng(12345);
 		loop = 0; 
-		flag = 0;
+		flags = 5;
 		RedetectPointsFlag = 0; 
 
 		initTracker();
@@ -137,18 +141,13 @@ public:
 	void initDetector(){
 		vector <float> err(100);
 	    vector <uchar> Status(100);
-	    // Size WinSize = Size(31,31);
-	    // int maxLevel = 3;
-	    // TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 30, 0.03);
-	    // int flags = 0;
-	    // double minEigThreshold = 1e-4;
 	}
 
 
 	void detectProcess(){
  		
  		//settings for detect
-		int i = 0; 
+		int ii = 0; 
 		Mat frame;
 		Mat oldframe;
 		
@@ -162,17 +161,17 @@ public:
 		}
 		cap.set(CV_CAP_PROP_POS_FRAMES, 10);
 
-
+		// avoid core dump
 		cap >> frame; 
-		cap >> cap_frame;
+		cap_frame = frame.clone();
 
 			while( 1 ){
 			cout << endl << endl; 
-			printf("The %dth frame started. \n", i); 
-	    	i++;
+			printf("The %dth frame started. \n", ii); 
+	    	ii++;
 	    	oldframe = frame.clone(); 
 			cap >> frame; 
-	    	cap >> cap_frame;
+	    	cap_frame = frame.clone();
 			
 	    	cout << "All togeether " << bboxes.size() << " bboxes" << endl; 
 		    // Find(only once) and track the feature points in two consecutive frames
@@ -180,15 +179,16 @@ public:
 
 	    	//if(i == 30){break;} //debug you
 	    	if(RedetectPointsFlag == 0){
+	    		RedetectPointsFlag = 1; // close the Redetect status
 				if( !frame.empty() ){ 
 				    loop++; 
 				    // Detect bounding boxes in the frame, save the corrdinates in Bboxes
 				    // then display the Bboxes
 				    detectAndDisplay( frame ); 
 				    // Rearrange Bboxes by left top point.x
-				    sortedBboxesId = sortRectByXAndGiveBackIndexes(bboxes); 
+				    // sortedBboxesId = sortRectByXAndGiveBackIndexes(bboxes); 
 				    
-				    bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
+				    // bboxes = rearrangeBboxesUsingSortedIndexes(sortedBboxesId); 
 				    
 				    
 				}else{ 
@@ -208,40 +208,28 @@ public:
 		 	
 			// draw all the point at a time
 			Mat nextKey_frame; 
-
 			drawKeypoints(frame, allNextKeypoints, nextKey_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
 			imshow("nextFeatures", nextKey_frame);
 			nextKey_frame.release();
-			for(int j = 0; j < (int)Bboxes.size(); j++){
 
-			}
-			
 			for( int j = 0; j < (int)Bboxes.size(); j++){
 				cout << "the " << j << "th " << "Bboxes, " << ///
-				"x= " << Bboxes[j].x << " y = " << Bboxes[j].y << endl;  
+				"x= " << Bboxes[j].x << " y = " << Bboxes[j].y << " width= " << Bboxes[j].width << " height= " << Bboxes[j].height << endl;  
 			}
-			// to make sure it's tracking, not dupllicating
-			// for( int j = 0; j < 10; j++){
-			// 	cout << "currentPoints, " << j << " x = " << currentPoints2f[j].x << ///
-			// 	" y = " << currentPoints2f[j].y << endl;
-			// 	cout << "nextPoints, " << j << " x = " << nextPoints2f[j].x << ///
-			// 	" y = " << nextPoints2f[j].y << endl;
-			// }
 			cout << "allNextKeypoints.size() = " << allNextKeypoints.size() << endl; 
 
-			RedetectPointsFlag = 1; // close the Redetect status
-			if(i%10 == 0){
+			
+			if(ii % 10 == 0){
 				RedetectPointsFlag = 0; 
-				// PointNumsTillThisBbox.clear();
-		  //   	PointIds.clear(); 
-		  //   	PointNums.clear();
-		  //   	BoxIds.clear(); 
-		  //   	allNextKeypoints.clear();
 			}
 
 			int c = waitKey(10);
 			if( (char)c == 'c' ) { break; }
+
+			getchar();
       		} 
+
+
 	}
 
 	void SingleTracker(Mat _oldframe, Mat _frame, int BboxNum){
@@ -252,7 +240,6 @@ public:
 
 	    }else{
 	     	// prepare oldframe_gray
-	     	cout << "250" << endl;
 			Mat oldframe_gray; 
 			cvtColor( _oldframe, oldframe_gray, CV_BGR2GRAY );
 		    equalizeHist( oldframe_gray, oldframe_gray );
@@ -260,16 +247,12 @@ public:
 		    Mat frame_gray;
 			cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 		    equalizeHist( frame_gray, frame_gray );
-		    cout << "257" << endl;
 	    	Keypoints.clear();
 	    	currentPoints2f.clear(); 
 		    nextPoints2f.clear();
 		    nextKeypoints.clear();
-	    	cout << "262" << endl;
-		    //cout << "reached 266" << endl;
-		    // if( (int)PointNumsTillThisBbox.size() < (BboxNum-1)){
-		    // 	return; ///////okashi
-		    // }
+
+
 		    cout << "(int)PointNumsTillThisBbox.size()  " << (int)PointNumsTillThisBbox.size() << endl;  
 		    cout << "PointNumsTillThisBbox[BboxNum] = " <<PointNumsTillThisBbox[BboxNum] <<" BboxNum = " <<BboxNum<< endl; 
 		    cout << "PointNumsTillThisBbox[BboxNum + 1 ] = " <<PointNumsTillThisBbox[BboxNum + 1]<< endl; 
@@ -282,69 +265,80 @@ public:
 		    	// yue jie zai ci
 		    	cout << "Keypoints Number is " << Keypoints.size() << endl;
 			
-	    
-	     
-		    // PointNumsTillThisBbox.clear();
-	    	// PointIds.clear(); 
-	    	// PointNums.clear();
-	    	// BoxIds.clear(); 
-	    	// allNextKeypoints.clear();
+	  //   	Mat debug_frame; 
+	  //   	debug_frame = _frame.clone(); 
+	  //    	drawKeypoints(_frame, Keypoints, debug_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			// rectangle(debug_frame, Point(Bboxes[BboxNum].x, Bboxes[BboxNum].y), Point(Bboxes[BboxNum].x + Bboxes[BboxNum].width, Bboxes[BboxNum].y + Bboxes[BboxNum].height), Scalar(255,255,255)); 
+			// imshow("debugFeatures before", debug_frame);
+			// getchar();
 
-		    // draw Keypoints in this Bbox in "Feature Points" window
-		    cout << "295" <<endl;
-			Mat Key_frame;
-			drawKeypoints(_oldframe, Keypoints, Key_frame, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
-			imshow("Feature Points", Key_frame); 
-			cout << "299" << endl;
+		   
 			// convert the Keypoints to Points2f for optical flow tracking
 			KeyPoint::convert(Keypoints, currentPoints2f, pIDs);
 			// optical flow, track currentPoints2f, give out nextPoints2f	    
 			calcOpticalFlowPyrLK(oldframe_gray, frame_gray, currentPoints2f, nextPoints2f, Status, err);
 		    
+		    // for(int e = 0; e < (int)currentPoints2f.size(); e ++){
+		    // 	cout << "OLD.x " << currentPoints2f[e].x << ", OLD.y " << currentPoints2f[e].y << endl; 
+		    // 	cout << "NEW.x " << nextPoints2f[e].x << ", NEW.y " << nextPoints2f[e].y << endl; 
+		    // 	cout << "err " << err[e] << endl;
+		    // 	if(err[e] > 20){
+
+		    // 		nextPoints2f[e].x = currentPoints2f[e].x;
+		    // 		nextPoints2f[e].y = currentPoints2f[e].y;
+		    // 		err[e] = 20; 
+		    // 	}
+		    // }
 		    int boxIdx = BoxIds[BboxNum]; 
 		    
 		    // Rect _deletedBbox = Bboxes[BboxNum]; 
 		     
-		    int minX = 1000; 
-		    int maxX = 0;
-		    int minY = 1000;
-		    int maxY = 0;
+		    minX = 10000; 
+		    maxX = -10000;
+		    minY = 10000;
+		    maxY = -10000;
 		    // update nextKeyPoints, allNextKeypoints, PointIds using nextPoints2f
 		    for(int j = 0; j < (int)nextPoints2f.size(); j++){
 		    	nextOneKeyPoint.pt.x = nextPoints2f[j].x;
 		    	nextOneKeyPoint.pt.y = nextPoints2f[j].y;
-		    	if(minX > nextOneKeyPoint.pt.x){minX = nextOneKeyPoint.pt.x;}
-		    	if(maxX < nextOneKeyPoint.pt.x){maxX = nextOneKeyPoint.pt.x;}
-		    	if(minY > nextOneKeyPoint.pt.y){minY = nextOneKeyPoint.pt.y;}
-		    	if(maxY < nextOneKeyPoint.pt.y){maxY = nextOneKeyPoint.pt.y;}
+		    	if(minX > nextOneKeyPoint.pt.x){minX = (int)nextOneKeyPoint.pt.x;}
+		    	if(maxX < nextOneKeyPoint.pt.x){maxX = (int)nextOneKeyPoint.pt.x;}
+		    	if(minY > nextOneKeyPoint.pt.y){minY = (int)nextOneKeyPoint.pt.y;}
+		    	if(maxY < nextOneKeyPoint.pt.y){maxY = (int)nextOneKeyPoint.pt.y;}
 		    	nextKeypoints.push_back(nextOneKeyPoint); 
 				allNextKeypoints[PointNumsTillThisBbox[boxIdx] + j] = nextKeypoints[j];
 				//PointIds.push_back(boxIdx);  should remain unchanged
 			}
+			
+			cout << "ORIGINAL Bbox data" << endl; 
+			cout << "x = " << Bboxes[BboxNum].x << ", y = " << Bboxes[BboxNum].y << ", x+width = " << Bboxes[BboxNum].x + Bboxes[BboxNum].width << ", y+height = " << Bboxes[BboxNum].y + Bboxes[BboxNum].height << endl; 
+			
 			Bboxes[BboxNum].x = minX;
 			Bboxes[BboxNum].y = minY;
 			Bboxes[BboxNum].width = maxX-minX;
 			Bboxes[BboxNum].height = maxY-minY;
-			//BoxIds.push_back(boxIdx);
-			//PointNums.push_back((int)nextPoints2f.size());
-			// construct PointNumsTillThisBbox in this way to make it 1 longer that PointNums 
-			// if( (int)PointNums.size() == 1){
-			// 	PointNumsTillThisBbox.push_back( 0 );
-			// }else if((int)PointNums.size() == ((int)Bboxes.size())){
-			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-1] + PointNums[(int)PointNums.size()-1] );
-			// }else{
-			// 	PointNumsTillThisBbox.push_back( PointNumsTillThisBbox[(int)PointNums.size()-2] + PointNums[(int)PointNums.size()-2] );
-			// }
-			//PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
-			
+
+			cout << "minX " << minX << ", minY " << minY << ", width " << maxX-minX << ", height " << maxY-minY << endl; 
+
+			cout << "RENEWED Bbox data" << endl; 
+			cout << "x = " << Bboxes[BboxNum].x << ", y = " << Bboxes[BboxNum].y << ", width = " << Bboxes[BboxNum].width << ", height = " << Bboxes[BboxNum].height << endl; 
+
+
+			// Mat debug_frame2; 
+	  //   	debug_frame2 = _frame.clone();
+			// drawKeypoints(_frame, nextKeypoints, debug_frame2, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+			// rectangle(debug_frame2, Point(Bboxes[BboxNum].x, Bboxes[BboxNum].y), Point(Bboxes[BboxNum].x + Bboxes[BboxNum].width, Bboxes[BboxNum].y + Bboxes[BboxNum].height), Scalar(255,255,255)); 
+			// imshow("debugFeatures after", debug_frame2);
+			// getchar();
+
 			cout << "-----------------" <<endl << "After SingleTracker on " << BboxNum << " Bbox, " << endl; 
 			cout << "BoxId in this Bbox " << BoxIds[BoxIds.size()-1] << endl; 
 			cout << "PointNumsTillThisBbox has size " << PointNumsTillThisBbox.size() << endl; 
 			cout << "The current element of PointNumsTillThisBbox is " << PointNumsTillThisBbox[BboxNum] << endl; 
 			cout << "PointIds(all the same) in this Bbox " << PointIds[(int)( allNextKeypoints.size()-nextKeypoints.size() )] << endl; 
 			cout << "All together #PointIds add in this Bbox(PointNums) " << PointNums[BboxNum] << endl;
-			cout << "-----------------" << endl << "SingleTracker ended" << endl << "--------------" << endl; 
+			cout << "Bbox width after max, min is " << Bboxes[BboxNum].width << endl;  
+			cout << "-----------------" << endl << "SingleTracker ended this time" << endl << "--------------" << endl; 
 			// substitute Keypoints with nextKeypoints
 			// Keypoints.clear();
 			// for(int j = 0; j < (int)nextKeypoints.size(); j++){
@@ -378,6 +372,7 @@ public:
 			if (boxIdx == NOTHING){
 				Bboxes.push_back(_bboxes);
 				cout << "push_back a box " << endl; 
+				cout << "BOX_w = " << _bboxes.width << endl; 
 				BoxScores.push_back(1); 
 				 
 
@@ -439,7 +434,7 @@ public:
 				PointNums.push_back((int)Keypoints.size());
 				// make PointNumsTillThisBox 1 longer
 				PointNumsTillThisBbox.push_back(PointNumsTillThisBbox[PointNumsTillThisBbox.size()-1] + (int)Keypoints.size()); 
-				cout << "426" << endl;
+				
 			}
 		
 		
@@ -554,8 +549,7 @@ private:
 
 	    cvtColor( _frame, frame_gray, CV_BGR2GRAY );
 	    equalizeHist( frame_gray, frame_gray );
-	    int k = 0; 
-	    //-- Detect tools
+	    //-- Detect, and save results in "tools"
 	    casClassifier.detectMultiScale( frame_gray, tools, 1.005, 2, 0|CASCADE_SCALE_IMAGE, Size(0, 0) );
 
 	    for( size_t i = 0; i < tools.size(); i++ ){
@@ -566,23 +560,20 @@ private:
 	  	    
 	  	    //printf("Tool detected in this frame. i = %d\n", (int)i + 1);
 	  	    
-	        if(loop%10 == 0 && computeRectJoinUnion(tools[i], _lasttools[i]) > 0.9 ){
-			k++;
-			_capturedtools = tools; 
-	  	        //rectangle(cap_frame, Point(tools[i].x, tools[i].y), Point(tools[i].x + tools[i].width, tools[i].y + tools[i].height), Scalar(0,0,255)); 
-			//printf("Tool TRACKING TRACKING in this frame. k = %d, tool number is %d\n", (int)k, (int)i + 1);
-			flag = 1; 	  	    
-			} 
-		if(flag  == 1){
+	  //       if(loop%10 == 0 ){
+			// 	
+		 //  	    flag = 1; 	  	    
+			// } 
+	        _lasttools = tools; 
+	        bboxes = tools;//In vector, = is copy
+	    }
+	    // if(flag  == 1){
+	    _capturedtools.clear(); 
+    	_capturedtools = Bboxes; 
+		for( int i = 0; i < (int)_capturedtools.size(); i++){
 			rectangle(cap_frame, Point(_capturedtools[i].x, _capturedtools[i].y), Point(_capturedtools[i].x + _capturedtools[i].width, _capturedtools[i].y + _capturedtools[i].height), Scalar(0,0,255));
 		}
-			k = 0;
-	        _lasttools = tools; 
-
-	        bboxes = tools;//In vector, = is copy
-	    	
-	    	
-	    }
+		// }
 	    //-- Show what you got
 	    imshow( window_name, _frame );
 	    imshow( "captured", cap_frame); 

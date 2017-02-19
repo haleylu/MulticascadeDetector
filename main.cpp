@@ -65,7 +65,7 @@ int main( int argc, const char** argv ){
 		cout << pencil[u] << " "; 
 	}
 	cout << endl;
-
+	cout << "###############################3#############################################################################################################################" << endl; 
 	// emxArray_real_T *indexes_ = NULL;
  //  	emxArray_int32_T *X = NULL;
  //  	int32_T pencil_[(int)pencil.size()];
@@ -84,6 +84,6 @@ int main( int argc, const char** argv ){
 	// // cout << indexes[0] << endl; 
 
 
-	
+
 	return 0;
 }
